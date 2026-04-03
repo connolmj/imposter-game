@@ -189,9 +189,17 @@ body {
   text-align: center; cursor: pointer;
   transition: all 0.2s; -webkit-tap-highlight-color: transparent;
 }
-.category-card:active { transform: scale(0.95); background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.4); }
+.category-card:active { transform: scale(0.95); }
+.category-card.selected {
+  background: rgba(255,255,255,0.28);
+  border-color: rgba(255,255,255,0.7);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.25);
+  transform: scale(1.03);
+}
 .category-card .emoji { font-size: 2rem; margin-bottom: 6px; }
 .category-card .cat-name { font-weight: 800; font-size: 0.85rem; }
+.category-card .check { font-size: 0.8rem; margin-top: 4px; opacity: 0; transition: opacity 0.2s; }
+.category-card.selected .check { opacity: 1; }
 
 /* ── Word Card ─────────────────────────────────────────── */
 .word-card {
@@ -343,6 +351,9 @@ body {
 
   <button class="btn mt-12" id="btn-join">Join Game</button>
   <div class="error-text hidden" id="home-error"></div>
+  <div style="margin-top:auto;padding-top:32px;padding-bottom:8px;font-size:0.7rem;font-weight:700;color:rgba(255,255,255,0.3);text-align:center;letter-spacing:1px;">
+    ✨ vibecoded by Mike Connolly
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════ -->
@@ -374,9 +385,10 @@ body {
     </div>
   </div>
 
-  <!-- Host: pick category to start -->
-  <div class="mt-16 text-center text-sm text-dim" id="lobby-pick-label">Pick a category to start the round</div>
+  <!-- Host: pick categories to start -->
+  <div class="mt-16 text-center text-sm text-dim" id="lobby-pick-label">Select one or more categories</div>
   <div class="category-grid" id="lobby-categories"></div>
+  <button class="btn btn-solid mt-12 hidden" id="btn-start-round">Start Round 🎉</button>
 
   <!-- Non-host: waiting message -->
   <div class="mt-24 text-center text-dim hidden" id="lobby-waiting">
@@ -584,23 +596,52 @@ document.getElementById('hints-toggle').addEventListener('change', (e) => {
   socket.emit('update-settings', currentSettings);
 });
 
+let selectedCategories = new Set();
+
 function loadCategories() {
+  selectedCategories.clear();
+  document.getElementById('btn-start-round').classList.add('hidden');
+
   socket.emit('get-categories', (cats) => {
     const grid = document.getElementById('lobby-categories');
     grid.innerHTML = '';
     cats.forEach(cat => {
       const card = document.createElement('div');
       card.className = 'category-card';
-      card.innerHTML = `<div class="emoji">${CATEGORY_EMOJIS[cat] || '🎲'}</div><div class="cat-name">${esc(cat)}</div>`;
+      card.innerHTML = `
+        <div class="emoji">${CATEGORY_EMOJIS[cat] || '🎲'}</div>
+        <div class="cat-name">${esc(cat)}</div>
+        <div class="check">✅</div>`;
       card.addEventListener('click', () => {
-        socket.emit('start-round', cat, (res) => {
-          if (!res.success) showError('lobby-error', res.error);
-        });
+        if (selectedCategories.has(cat)) {
+          selectedCategories.delete(cat);
+          card.classList.remove('selected');
+        } else {
+          selectedCategories.add(cat);
+          card.classList.add('selected');
+        }
+        const btn = document.getElementById('btn-start-round');
+        if (selectedCategories.size > 0) {
+          const count = selectedCategories.size;
+          btn.textContent = count === 1
+            ? `Start Round 🎉`
+            : `Start Round (${count} categories) 🎉`;
+          btn.classList.remove('hidden');
+        } else {
+          btn.classList.add('hidden');
+        }
       });
       grid.appendChild(card);
     });
   });
 }
+
+document.getElementById('btn-start-round').addEventListener('click', () => {
+  if (selectedCategories.size === 0) return;
+  socket.emit('start-round', Array.from(selectedCategories), (res) => {
+    if (!res.success) showError('lobby-error', res.error);
+  });
+});
 
 // ── PLAYING SCREEN ──────────────────────────────────
 document.getElementById('btn-ready').addEventListener('click', () => {
@@ -708,6 +749,7 @@ socket.on('round-reveal', (data) => {
 socket.on('back-to-lobby', () => {
   showScreen('screen-lobby');
   setConfetti(false);
+  selectedCategories = new Set();
   if (isHost) {
     setupLobbyForHost();
     loadCategories();

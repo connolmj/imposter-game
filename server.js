@@ -51,11 +51,20 @@ function getCategories() {
   return Object.keys(WORDS);
 }
 
-function startRound(room, category) {
-  const wordList = WORDS[category];
-  if (!wordList || wordList.length === 0) return null;
+function startRound(room, categories) {
+  // Accept a single category string or an array of categories
+  const catArray = Array.isArray(categories) ? categories : [categories];
 
-  const wordEntry = wordList[Math.floor(Math.random() * wordList.length)];
+  // Build combined word pool from all selected categories
+  const pool = [];
+  for (const cat of catArray) {
+    if (WORDS[cat]) {
+      for (const entry of WORDS[cat]) pool.push({ ...entry, category: cat });
+    }
+  }
+  if (pool.length === 0) return null;
+
+  const wordEntry = pool[Math.floor(Math.random() * pool.length)];
   const playerIds = Array.from(room.players.keys());
 
   // Shuffle and pick imposters
@@ -63,13 +72,13 @@ function startRound(room, category) {
   const imposterCount = Math.min(room.settings.imposterCount, Math.floor(playerIds.length / 2));
   const imposters = new Set(shuffled.slice(0, imposterCount));
 
-  room.currentRound = { category, wordEntry, imposters };
+  room.currentRound = { category: wordEntry.category, wordEntry, imposters };
   room.state = 'playing';
 
   // Reset ready states
   for (const [, p] of room.players) p.ready = false;
 
-  return { category, wordEntry, imposters };
+  return { category: wordEntry.category, wordEntry, imposters };
 }
 
 // ── Socket Events ───────────────────────────────────────────
