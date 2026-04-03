@@ -66,12 +66,17 @@ function getCategories() {
 function startRound(room, categories) {
   const catArray = Array.isArray(categories) ? categories : [categories];
 
-  const pool = [];
+  // Build pool, excluding words already used this session
+  const usedWords = new Set(room.roundHistory.map(r => r.word));
+  let pool = [];
   for (const cat of catArray) {
     if (WORDS[cat]) {
       for (const entry of WORDS[cat]) pool.push({ ...entry, category: cat });
     }
   }
+  // Filter out used words; fall back to full pool if all have been played
+  const freshPool = pool.filter(e => !usedWords.has(e.word));
+  if (freshPool.length > 0) pool = freshPool;
   if (pool.length === 0) return null;
 
   const wordEntry = pool[Math.floor(Math.random() * pool.length)];
@@ -219,15 +224,26 @@ io.on('connection', (socket) => {
   });
 
   // GET WORD (single-device mode — no room needed)
-  socket.on('get-word', (categories, callback) => {
-    const catArray = Array.isArray(categories) ? categories : [categories];
-    const pool = [];
+  // data: { categories: [...], usedWords: [...] }  OR legacy: just categories array
+  socket.on('get-word', (data, callback) => {
+    let catArray, usedWords;
+    if (Array.isArray(data)) {
+      catArray = data; usedWords = [];
+    } else {
+      catArray = Array.isArray(data.categories) ? data.categories : [data.categories];
+      usedWords = Array.isArray(data.usedWords) ? data.usedWords : [];
+    }
+    const usedSet = new Set(usedWords);
+    let pool = [];
     for (const cat of catArray) {
       if (WORDS[cat]) {
         for (const entry of WORDS[cat]) pool.push({ ...entry, category: cat });
       }
     }
     if (pool.length === 0) return callback({ success: false, error: 'No words found.' });
+    // Prefer unused words; fall back to full pool if all exhausted
+    const freshPool = pool.filter(e => !usedSet.has(e.word));
+    if (freshPool.length > 0) pool = freshPool;
     const wordEntry = pool[Math.floor(Math.random() * pool.length)];
     callback({ success: true, word: wordEntry.word, category: wordEntry.category, hint: wordEntry.hint });
   });

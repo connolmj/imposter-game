@@ -106,7 +106,12 @@ body {
 }
 .btn-solid:active { background: #f0e6ff; }
 .btn-small { padding: 10px 20px; font-size: 0.95rem; width: auto; max-width: none; }
-.btn-danger { border-color: rgba(255,80,80,0.5); color: #ff8888; }
+.btn-danger {
+  background: rgba(183,28,28,0.85) !important;
+  border-color: rgba(255,255,255,0.3) !important;
+  color: white !important;
+  font-weight: 900;
+}
 
 /* ── Player List ───────────────────────────────────────── */
 .player-list { width: 100%; max-width: 340px; margin-top: 16px; }
@@ -404,7 +409,7 @@ body {
     <div class="mode-card mt-12" id="mode-multi">
       <div class="mode-icon">📲</div>
       <div class="mode-info">
-        <div class="mode-title">Everyone's Phone</div>
+        <div class="mode-title">Multiple Devices</div>
         <div class="mode-desc">Each player joins on their own device using a room code.</div>
       </div>
     </div>
@@ -423,7 +428,7 @@ body {
   <button class="back-btn" onclick="sessionStorage.removeItem('imposter-session');showScreen('screen-mode')">← Back</button>
 
   <div class="title mt-52">Imposter!</div>
-  <div class="subtitle">Everyone's Phone</div>
+  <div class="subtitle">Multiple Devices</div>
 
   <div class="input-group mt-24">
     <label>Your Name</label>
@@ -543,11 +548,7 @@ body {
     <div style="font-size:2.5rem;">🕵️</div>
     <div style="font-family:'Baloo 2',cursive;font-size:1.3rem;font-weight:800;color:#2d3436;margin-top:8px;">Find the Imposter!</div>
     <div style="font-size:0.85rem;color:#636e72;margin-top:8px;line-height:1.5;">Discuss, ask questions, and vote on<br>who you think is lying.</div>
-    <div style="margin-top:16px;padding:12px;background:linear-gradient(135deg,rgba(108,60,225,0.08),rgba(200,80,192,0.08));border-radius:12px;">
-      <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#9b59b6;">Category</div>
-      <div style="font-family:'Baloo 2',cursive;font-size:1.2rem;font-weight:800;color:#2d3436;margin-top:4px;" id="single-disc-category"></div>
-    </div>
-    <div style="margin-top:14px;padding:12px;background:linear-gradient(135deg,rgba(46,213,115,0.08),rgba(0,210,255,0.08));border-radius:12px;">
+    <div style="margin-top:16px;padding:12px;background:linear-gradient(135deg,rgba(46,213,115,0.08),rgba(0,210,255,0.08));border-radius:12px;">
       <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#27ae60;">Goes First</div>
       <div style="font-family:'Baloo 2',cursive;font-size:1.2rem;font-weight:800;color:#2d3436;margin-top:4px;" id="single-disc-first">🎲 ...</div>
     </div>
@@ -586,7 +587,7 @@ body {
     <div style="font-weight:800;color:#6C3CE1;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">The Goal</div>
     <p style="font-size:0.9rem;line-height:1.6;margin-bottom:16px;">Everyone gets the same secret word — except the <strong>Imposter</strong>, who doesn't know what it is. Players take turns giving one-word clues. The group votes to find the Imposter, and the Imposter tries to stay hidden!</p>
 
-    <div style="font-weight:800;color:#6C3CE1;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">Everyone's Phone Mode</div>
+    <div style="font-weight:800;color:#6C3CE1;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">Multiple Devices Mode</div>
     <p style="font-size:0.9rem;line-height:1.6;margin-bottom:4px;">① Host creates a game and shares the 4-letter room code.</p>
     <p style="font-size:0.9rem;line-height:1.6;margin-bottom:4px;">② Everyone joins on their own device.</p>
     <p style="font-size:0.9rem;line-height:1.6;margin-bottom:4px;">③ Host picks categories and starts the round.</p>
@@ -1152,6 +1153,7 @@ document.getElementById('htp-overlay').addEventListener('click', (e) => {
 
 // ── SINGLE DEVICE STATE ──────────────────────────────
 let singlePlayers = [];        // [{ name }]
+let singleUsedWords = [];      // words played this session, to avoid repeats
 let singleRoles  = [];         // [{ name, isImposter, word, category, hint }]
 let singleCurrentIdx = 0;
 let singleSettings = { imposterCount: 1, hintsEnabled: true };
@@ -1161,6 +1163,7 @@ let isRevealed = false;
 
 function initSingleSetup() {
   singlePlayers = [];
+  singleUsedWords = [];  // reset word history on a brand new session
   singleSelectedCats = new Set();
   document.getElementById('single-player-list').innerHTML = '';
   document.getElementById('single-add-name').value = '';
@@ -1285,13 +1288,16 @@ document.getElementById('btn-single-start').addEventListener('click', () => {
 });
 
 function startSingleGame() {
-  socket.emit('get-word', Array.from(singleSelectedCats), (res) => {
+  socket.emit('get-word', { categories: Array.from(singleSelectedCats), usedWords: singleUsedWords }, (res) => {
     if (!res.success) return showError('single-error', res.error);
     buildSingleRoles(res);
   });
 }
 
 function buildSingleRoles(serverData) {
+  // Track this word so it won't repeat in the same session
+  singleUsedWords.push(serverData.word);
+
   // Assign roles locally among singlePlayers using server's word
   const count = Math.min(singleSettings.imposterCount, Math.floor(singlePlayers.length / 2));
   const shuffled = [...singlePlayers].sort(() => Math.random() - 0.5);
@@ -1398,8 +1404,6 @@ document.getElementById('btn-single-done').addEventListener('click', () => {
     showSinglePassScreen();
   } else {
     // All players done — go to discussion
-    const category = singleRoles[0].category;
-    document.getElementById('single-disc-category').textContent = category;
     // Pick a random non-imposter to go first
     const nonImposters = singleRoles.filter(r => !r.isImposter);
     const firstUp = nonImposters[Math.floor(Math.random() * nonImposters.length)];
