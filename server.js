@@ -134,6 +134,20 @@ io.on('connection', (socket) => {
     callback(getCategories());
   });
 
+  // GET WORD (single-device mode — no room needed)
+  socket.on('get-word', (categories, callback) => {
+    const catArray = Array.isArray(categories) ? categories : [categories];
+    const pool = [];
+    for (const cat of catArray) {
+      if (WORDS[cat]) {
+        for (const entry of WORDS[cat]) pool.push({ ...entry, category: cat });
+      }
+    }
+    if (pool.length === 0) return callback({ success: false, error: 'No words found.' });
+    const wordEntry = pool[Math.floor(Math.random() * pool.length)];
+    callback({ success: true, word: wordEntry.word, category: wordEntry.category, hint: wordEntry.hint });
+  });
+
   // START ROUND (host only)
   socket.on('start-round', (category, callback) => {
     const room = findRoomBySocket(socket.id);
@@ -143,7 +157,8 @@ io.on('connection', (socket) => {
     const round = startRound(room, category);
     if (!round) return callback({ success: false, error: 'Invalid category.' });
 
-    callback({ success: true });
+    // In single-device mode the client passes singleDevice:true and needs the word back in the callback
+    callback({ success: true, word: round.wordEntry.word, category: round.category, hint: round.wordEntry.hint });
 
     // Send each player their role
     for (const [id, player] of room.players) {

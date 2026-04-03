@@ -304,6 +304,57 @@ body {
 .gap-8 { gap: 8px; }
 .flex-row { display: flex; align-items: center; }
 .hidden { display: none !important; }
+
+/* ── Mode Select Cards ─────────────────────────────────── */
+.mode-card {
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px; border-radius: 20px;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 2px solid rgba(255,255,255,0.25);
+  cursor: pointer; transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.mode-card:active { transform: scale(0.97); background: rgba(255,255,255,0.25); }
+.mode-icon { font-size: 2.2rem; flex-shrink: 0; }
+.mode-title { font-family: 'Baloo 2', cursive; font-size: 1.2rem; font-weight: 800; }
+.mode-desc { font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.7); margin-top: 2px; line-height: 1.4; }
+
+/* ── How to Play button ────────────────────────────────── */
+.htp-btn {
+  position: absolute; top: 16px; right: 16px;
+  padding: 8px 14px; border-radius: 50px;
+  font-family: 'Nunito', sans-serif; font-size: 0.75rem; font-weight: 800;
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 2px solid rgba(255,255,255,0.25);
+  color: white; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 10;
+}
+.htp-btn:active { background: rgba(255,255,255,0.28); }
+
+/* ── Back button ───────────────────────────────────────── */
+.back-btn {
+  position: absolute; top: 16px; left: 16px;
+  padding: 8px 14px; border-radius: 50px;
+  font-family: 'Nunito', sans-serif; font-size: 0.75rem; font-weight: 800;
+  background: rgba(255,255,255,0.12);
+  border: 2px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.7); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 10;
+}
+.back-btn:active { background: rgba(255,255,255,0.22); }
+
+/* ── Hold-to-reveal button ─────────────────────────────── */
+.btn-hold {
+  background: linear-gradient(135deg, #6C3CE1, #C850C0) !important;
+  border-color: transparent !important;
+  box-shadow: 0 6px 20px rgba(108,60,225,0.4);
+  transform: scale(1.02);
+}
+.btn-hold:active { transform: scale(0.97) !important; }
 </style>
 </head>
 <body>
@@ -325,11 +376,46 @@ body {
 <div class="toast" id="toast"></div>
 
 <!-- ═══════════════════════════════════════════════════════ -->
-<!-- SCREEN: HOME -->
+<!-- SCREEN: MODE SELECT (landing page) -->
 <!-- ═══════════════════════════════════════════════════════ -->
-<div class="screen active" id="screen-home">
+<div class="screen active" id="screen-mode">
+  <!-- How to Play button -->
+  <button class="htp-btn" id="htp-btn-mode" onclick="openHTP()">❓ How to Play</button>
+
   <div class="title mt-24">Imposter!</div>
   <div class="subtitle">The Party Game</div>
+
+  <div style="width:100%;max-width:340px;margin-top:36px;">
+    <div class="mode-card" id="mode-single">
+      <div class="mode-icon">📱</div>
+      <div class="mode-info">
+        <div class="mode-title">One Device</div>
+        <div class="mode-desc">Everyone shares one phone. Pass it around — words are hidden until it's your turn.</div>
+      </div>
+    </div>
+    <div class="mode-card mt-12" id="mode-multi">
+      <div class="mode-icon">📲</div>
+      <div class="mode-info">
+        <div class="mode-title">Everyone's Phone</div>
+        <div class="mode-desc">Each player joins on their own device using a room code.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:auto;padding-top:32px;padding-bottom:8px;font-size:0.7rem;font-weight:700;color:rgba(255,255,255,0.3);text-align:center;letter-spacing:1px;">
+    ✨ vibecoded by Mike Connolly
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SCREEN: HOME (multi-device) -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-home">
+  <button class="htp-btn" onclick="openHTP()">❓ How to Play</button>
+  <button class="back-btn" onclick="showScreen('screen-mode')">← Back</button>
+
+  <div class="title mt-24">Imposter!</div>
+  <div class="subtitle">Everyone's Phone</div>
 
   <div class="input-group mt-24">
     <label>Your Name</label>
@@ -351,8 +437,157 @@ body {
 
   <button class="btn mt-12" id="btn-join">Join Game</button>
   <div class="error-text hidden" id="home-error"></div>
-  <div style="margin-top:auto;padding-top:32px;padding-bottom:8px;font-size:0.7rem;font-weight:700;color:rgba(255,255,255,0.3);text-align:center;letter-spacing:1px;">
-    ✨ vibecoded by Mike Connolly
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SCREEN: SINGLE DEVICE SETUP -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-single-setup">
+  <button class="htp-btn" onclick="openHTP()">❓ How to Play</button>
+  <button class="back-btn" onclick="showScreen('screen-mode')">← Back</button>
+
+  <div class="title mt-24">One Device</div>
+  <div class="subtitle">Enter all player names</div>
+
+  <div class="player-list mt-16" id="single-player-list"></div>
+
+  <div class="input-group mt-12" style="display:flex;gap:8px;align-items:flex-end;">
+    <div style="flex:1;">
+      <label>Add Player</label>
+      <input class="input-field" id="single-add-name" type="text" placeholder="Player name" maxlength="16" autocomplete="off" />
+    </div>
+    <button class="btn btn-solid" style="width:auto;padding:16px 20px;margin-top:0;flex-shrink:0;" id="btn-add-player">+</button>
+  </div>
+  <div class="error-text hidden" id="single-error"></div>
+
+  <!-- Settings -->
+  <div class="settings-panel mt-16">
+    <h3>Game Settings</h3>
+    <div class="setting-row">
+      <span class="setting-label">Imposters</span>
+      <div class="setting-control">
+        <button class="stepper-btn" id="s-imp-minus">−</button>
+        <span class="stepper-value" id="s-imp-count">1</span>
+        <button class="stepper-btn" id="s-imp-plus">+</button>
+      </div>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label">Hints for Imposter</span>
+      <label class="toggle">
+        <input type="checkbox" id="s-hints-toggle" checked />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="mt-16 text-center text-sm text-dim">Select categories</div>
+  <div class="category-grid" id="single-categories"></div>
+  <button class="btn btn-solid mt-12 hidden" id="btn-single-start">Start Game 🎉</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SCREEN: SINGLE DEVICE PASS (hold to reveal) -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-single-pass">
+  <div class="title">Imposter!</div>
+
+  <div class="word-card mt-16" id="single-pass-card" style="width:100%;max-width:340px;position:relative;overflow:hidden;">
+    <!-- Locked state -->
+    <div id="single-locked">
+      <div style="font-size:3rem;">🔒</div>
+      <div style="font-family:'Baloo 2',cursive;font-size:1.4rem;font-weight:800;color:#2d3436;margin-top:8px;" id="single-pass-name"></div>
+      <div style="font-size:0.8rem;color:#9b59b6;font-weight:700;margin-top:6px;">It's your turn!</div>
+      <div style="font-size:0.75rem;color:#636e72;margin-top:12px;line-height:1.5;">Make sure no one else is looking,<br>then <strong>hold the button below</strong> to see your word.</div>
+    </div>
+    <!-- Revealed state (hidden by default) -->
+    <div id="single-revealed" style="display:none;">
+      <div class="role-label" id="single-reveal-role-label">Your Word Is</div>
+      <div class="the-word" id="single-reveal-word"></div>
+      <div class="cat-pill" id="single-reveal-cat" style="margin-top:8px;"></div>
+      <div class="hint-box hidden" id="single-reveal-hint" style="margin-top:14px;padding:12px;background:rgba(255,255,255,0.08);border-radius:12px;color:rgba(255,255,255,0.7);font-size:0.85rem;"></div>
+    </div>
+  </div>
+
+  <!-- Hold button -->
+  <button class="btn btn-solid mt-16" id="btn-hold-reveal"
+    style="user-select:none;-webkit-user-select:none;touch-action:none;">
+    👁 Hold to Reveal
+  </button>
+  <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-top:8px;text-align:center;">Release to hide your word</div>
+
+  <!-- Done / next player -->
+  <button class="btn mt-12 hidden" id="btn-single-done">Done — Pass the Phone 📲</button>
+
+  <div style="margin-top:16px;font-size:0.8rem;color:rgba(255,255,255,0.5);text-align:center;" id="single-pass-progress"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SCREEN: SINGLE DEVICE DISCUSSION -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-single-discussion">
+  <div class="title">Discuss! 🗣️</div>
+  <div class="subtitle">Everyone has seen their word</div>
+
+  <div class="word-card mt-24" style="width:100%;max-width:340px;">
+    <div style="font-size:2.5rem;">🕵️</div>
+    <div style="font-family:'Baloo 2',cursive;font-size:1.3rem;font-weight:800;color:#2d3436;margin-top:8px;">Find the Imposter!</div>
+    <div style="font-size:0.85rem;color:#636e72;margin-top:8px;line-height:1.5;">Discuss, ask questions, and vote on<br>who you think is lying.</div>
+    <div style="margin-top:16px;padding:12px;background:linear-gradient(135deg,rgba(108,60,225,0.08),rgba(200,80,192,0.08));border-radius:12px;">
+      <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#9b59b6;">Category</div>
+      <div style="font-family:'Baloo 2',cursive;font-size:1.2rem;font-weight:800;color:#2d3436;margin-top:4px;" id="single-disc-category"></div>
+    </div>
+  </div>
+
+  <button class="btn btn-danger mt-24" id="btn-single-reveal">Reveal the Imposter(s) 🎭</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SCREEN: SINGLE DEVICE REVEAL -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-single-reveal">
+  <div class="title">Round Over!</div>
+
+  <div class="reveal-card mt-16">
+    <div class="reveal-label">The Word Was</div>
+    <div class="reveal-word" id="single-reveal-the-word"></div>
+    <div class="reveal-imposters">
+      <div class="imp-label">The Imposter(s)</div>
+      <div class="imp-names" id="single-reveal-imp-names"></div>
+    </div>
+  </div>
+
+  <button class="btn btn-solid mt-24" id="btn-single-play-again">Play Again 🔄</button>
+  <button class="btn mt-12" onclick="showScreen('screen-mode')">Back to Home</button>
+</div>
+
+<!-- How to Play Modal -->
+<div id="htp-overlay" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow-y:auto;padding:24px 20px;">
+  <div style="max-width:380px;margin:0 auto;background:white;border-radius:24px;padding:28px 24px;color:#2d3436;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-family:'Baloo 2',cursive;font-size:1.6rem;font-weight:800;">How to Play 🎮</div>
+      <button onclick="closeHTP()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#636e72;padding:4px;">✕</button>
+    </div>
+
+    <div style="font-weight:800;color:#6C3CE1;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">The Goal</div>
+    <p style="font-size:0.9rem;line-height:1.6;margin-bottom:16px;">Everyone gets the same secret word — except the <strong>Imposter</strong>, who doesn't know what it is. Players take turns giving one-word clues. The group votes to find the Imposter, and the Imposter tries to stay hidden!</p>
+
+    <div style="font-weight:800;color:#6C3CE1;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">Everyone's Phone Mode</div>
+    <p style="font-size:0.9rem;line-height:1.6;margin-bottom:4px;">① Host creates a game and shares the 4-letter room code.</p>
+    <p style="font-size:0.9rem;line-height:1.6;margin-bottom:4px;">② Everyone joins on their own device.</p>
+    <p style="font-size:0.9rem;line-height:1.6;margin-bottom:4px;">③ Host picks categories and starts the round.</p>
+    <p style="font-size:0.9rem;line-height:1.6;margin-bottom:16px;">④ Each player secretly sees their word on their own phone.</p>
+
+    <div style="font-weight:800;color:#C850C0;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">One Device Mode</div>
+    <p style="font-size:0.9rem;line-height:1.6;margin-bottom:4px;">① Host enters all player names and picks settings.</p>
+    <p style="font-size:0.9rem;line-height:1.6;margin-bottom:4px;">② The phone is passed to each player in turn.</p>
+    <p style="font-size:0.9rem;line-height:1.6;margin-bottom:4px;">③ <strong>Hold the button</strong> to reveal your word — release to hide it.</p>
+    <p style="font-size:0.9rem;line-height:1.6;margin-bottom:16px;">④ After everyone's seen their word, discussion begins!</p>
+
+    <div style="font-weight:800;color:#FF6B9D;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">Winning</div>
+    <p style="font-size:0.9rem;line-height:1.6;margin-bottom:4px;">🕵️ <strong>Players win</strong> if they correctly vote out the Imposter.</p>
+    <p style="font-size:0.9rem;line-height:1.6;">🎭 <strong>Imposter wins</strong> if they avoid being caught — or if they can guess the secret word after being revealed!</p>
+
+    <button onclick="closeHTP()" style="width:100%;margin-top:20px;padding:14px;font-family:'Baloo 2',cursive;font-size:1rem;font-weight:800;color:white;background:linear-gradient(135deg,#6C3CE1,#C850C0);border:none;border-radius:50px;cursor:pointer;">Got it! Let's Play 🎉</button>
   </div>
 </div>
 
@@ -360,7 +595,8 @@ body {
 <!-- SCREEN: LOBBY -->
 <!-- ═══════════════════════════════════════════════════════ -->
 <div class="screen" id="screen-lobby">
-  <div class="title">Imposter!</div>
+  <button class="htp-btn" onclick="openHTP()">❓ How to Play</button>
+  <div class="title mt-8">Imposter!</div>
   <div class="room-pill"><div class="dot"></div> <span id="lobby-code"></span></div>
 
   <div class="player-list" id="lobby-players"></div>
@@ -403,7 +639,8 @@ body {
 <!-- SCREEN: PLAYING (word reveal) -->
 <!-- ═══════════════════════════════════════════════════════ -->
 <div class="screen" id="screen-playing">
-  <div class="title">Imposter!</div>
+  <button class="htp-btn" onclick="openHTP()">❓ How to Play</button>
+  <div class="title mt-8">Imposter!</div>
   <div class="subtitle" id="playing-subtitle"></div>
 
   <!-- Normal player card -->
@@ -760,6 +997,265 @@ socket.on('back-to-lobby', () => {
 
 socket.on('disconnect', () => {
   showToast('Disconnected from server');
+});
+
+// ── MODE SELECT ──────────────────────────────────────
+document.getElementById('mode-single').addEventListener('click', () => {
+  showScreen('screen-single-setup');
+  initSingleSetup();
+});
+document.getElementById('mode-multi').addEventListener('click', () => {
+  showScreen('screen-home');
+});
+
+// ── HOW TO PLAY MODAL ────────────────────────────────
+function openHTP() { document.getElementById('htp-overlay').style.display = 'block'; }
+function closeHTP() { document.getElementById('htp-overlay').style.display = 'none'; }
+document.getElementById('htp-overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('htp-overlay')) closeHTP();
+});
+
+// ── SINGLE DEVICE STATE ──────────────────────────────
+let singlePlayers = [];        // [{ name }]
+let singleRoles  = [];         // [{ name, isImposter, word, category, hint }]
+let singleCurrentIdx = 0;
+let singleSettings = { imposterCount: 1, hintsEnabled: true };
+let singleSelectedCats = new Set();
+let holdInterval = null;
+let isRevealed = false;
+
+function initSingleSetup() {
+  singlePlayers = [];
+  singleSelectedCats = new Set();
+  document.getElementById('single-player-list').innerHTML = '';
+  document.getElementById('single-add-name').value = '';
+  document.getElementById('s-imp-count').textContent = '1';
+  singleSettings = { imposterCount: 1, hintsEnabled: true };
+  document.getElementById('s-hints-toggle').checked = true;
+  document.getElementById('btn-single-start').classList.add('hidden');
+
+  // Load categories for single mode
+  socket.emit('get-categories', (cats) => {
+    const grid = document.getElementById('single-categories');
+    grid.innerHTML = '';
+    cats.forEach(cat => {
+      const card = document.createElement('div');
+      card.className = 'category-card';
+      card.innerHTML = `
+        <div class="emoji">${CATEGORY_EMOJIS[cat] || '🎲'}</div>
+        <div class="cat-name">${esc(cat)}</div>
+        <div class="check">✅</div>`;
+      card.addEventListener('click', () => {
+        if (singleSelectedCats.has(cat)) {
+          singleSelectedCats.delete(cat);
+          card.classList.remove('selected');
+        } else {
+          singleSelectedCats.add(cat);
+          card.classList.add('selected');
+        }
+        updateSingleStartBtn();
+      });
+      grid.appendChild(card);
+    });
+  });
+}
+
+function updateSingleStartBtn() {
+  const btn = document.getElementById('btn-single-start');
+  if (singlePlayers.length >= 3 && singleSelectedCats.size > 0) {
+    const cc = singleSelectedCats.size;
+    btn.textContent = cc === 1 ? 'Start Game 🎉' : `Start Game (${cc} categories) 🎉`;
+    btn.classList.remove('hidden');
+  } else {
+    btn.classList.add('hidden');
+  }
+}
+
+function renderSinglePlayerList() {
+  const c = document.getElementById('single-player-list');
+  c.innerHTML = '';
+  singlePlayers.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'player-item';
+    div.style.animationDelay = `${i * 0.05}s`;
+    div.innerHTML = `
+      <div class="player-avatar">${getInitials(p.name)}</div>
+      <span class="player-name">${esc(p.name)}</span>
+      <button onclick="removeSinglePlayer(${i})" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:1.1rem;cursor:pointer;padding:4px 8px;">✕</button>`;
+    c.appendChild(div);
+  });
+  updateSingleStartBtn();
+}
+
+function removeSinglePlayer(idx) {
+  singlePlayers.splice(idx, 1);
+  renderSinglePlayerList();
+}
+
+document.getElementById('btn-add-player').addEventListener('click', addSinglePlayer);
+document.getElementById('single-add-name').addEventListener('keyup', (e) => {
+  if (e.key === 'Enter') addSinglePlayer();
+});
+
+function addSinglePlayer() {
+  const input = document.getElementById('single-add-name');
+  const name = input.value.trim();
+  if (!name) return showError('single-error', 'Enter a name first!');
+  if (singlePlayers.some(p => p.name.toLowerCase() === name.toLowerCase()))
+    return showError('single-error', 'That name is already added!');
+  singlePlayers.push({ name });
+  input.value = '';
+  input.focus();
+  renderSinglePlayerList();
+}
+
+// Single device settings
+document.getElementById('s-imp-minus').addEventListener('click', () => {
+  if (singleSettings.imposterCount > 1) {
+    singleSettings.imposterCount--;
+    document.getElementById('s-imp-count').textContent = singleSettings.imposterCount;
+  }
+});
+document.getElementById('s-imp-plus').addEventListener('click', () => {
+  if (singleSettings.imposterCount < 3) {
+    singleSettings.imposterCount++;
+    document.getElementById('s-imp-count').textContent = singleSettings.imposterCount;
+  }
+});
+document.getElementById('s-hints-toggle').addEventListener('change', (e) => {
+  singleSettings.hintsEnabled = e.target.checked;
+});
+
+document.getElementById('btn-single-start').addEventListener('click', () => {
+  if (singlePlayers.length < 3) return showError('single-error', 'Need at least 3 players!');
+  if (singleSelectedCats.size === 0) return showError('single-error', 'Pick at least one category!');
+  startSingleGame();
+});
+
+function startSingleGame() {
+  socket.emit('get-word', Array.from(singleSelectedCats), (res) => {
+    if (!res.success) return showError('single-error', res.error);
+    buildSingleRoles(res);
+  });
+}
+
+function buildSingleRoles(serverData) {
+  // Assign roles locally among singlePlayers using server's word
+  const count = Math.min(singleSettings.imposterCount, Math.floor(singlePlayers.length / 2));
+  const shuffled = [...singlePlayers].sort(() => Math.random() - 0.5);
+  const imposterNames = new Set(shuffled.slice(0, count).map(p => p.name));
+
+  singleRoles = singlePlayers.map(p => ({
+    name: p.name,
+    isImposter: imposterNames.has(p.name),
+    word: serverData.word,
+    category: serverData.category,
+    hint: serverData.hint
+  }));
+
+  singleCurrentIdx = 0;
+  showSinglePassScreen();
+}
+
+function showSinglePassScreen() {
+  const player = singleRoles[singleCurrentIdx];
+  showScreen('screen-single-pass');
+  isRevealed = false;
+
+  document.getElementById('single-pass-name').textContent = player.name;
+  document.getElementById('single-pass-progress').textContent =
+    `Player ${singleCurrentIdx + 1} of ${singleRoles.length}`;
+
+  // Reset card to locked state
+  document.getElementById('single-locked').style.display = 'block';
+  document.getElementById('single-revealed').style.display = 'none';
+  document.getElementById('btn-hold-reveal').textContent = '👁 Hold to Reveal';
+  document.getElementById('btn-hold-reveal').classList.remove('btn-hold');
+  document.getElementById('btn-single-done').classList.add('hidden');
+
+  // Pre-populate revealed state (hidden)
+  if (player.isImposter) {
+    document.getElementById('single-reveal-role-label').textContent = 'Uh Oh...';
+    document.getElementById('single-reveal-word').textContent = "You're the Imposter!";
+    document.getElementById('single-reveal-word').style.cssText =
+      "font-family:'Baloo 2',cursive;font-size:2rem;font-weight:800;background:linear-gradient(90deg,#FF6B9D,#FFD93D);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:8px 0;line-height:1.1;";
+    document.getElementById('single-reveal-cat').style.display = 'none';
+    const hintBox = document.getElementById('single-reveal-hint');
+    if (singleSettings.hintsEnabled && player.hint) {
+      hintBox.innerHTML = `Psst... here's a hint: <strong style="color:#FFD93D">${esc(player.hint)}</strong>`;
+      hintBox.classList.remove('hidden');
+      hintBox.style.background = 'rgba(108,60,225,0.1)';
+    } else {
+      hintBox.classList.add('hidden');
+    }
+  } else {
+    document.getElementById('single-reveal-role-label').textContent = 'Your Word Is';
+    document.getElementById('single-reveal-word').textContent = player.word;
+    document.getElementById('single-reveal-word').style.cssText =
+      "font-family:'Baloo 2',cursive;font-size:2.8rem;font-weight:800;color:#2d3436;margin:8px 0;line-height:1.1;";
+    const catPill = document.getElementById('single-reveal-cat');
+    catPill.textContent = player.category;
+    catPill.style.display = 'inline-block';
+    document.getElementById('single-reveal-hint').classList.add('hidden');
+  }
+}
+
+// Hold-to-reveal button logic
+const holdBtn = document.getElementById('btn-hold-reveal');
+
+function startReveal() {
+  if (isRevealed) return;
+  isRevealed = true;
+  document.getElementById('single-locked').style.display = 'none';
+  document.getElementById('single-revealed').style.display = 'block';
+  holdBtn.textContent = '🙈 Release to Hide';
+  holdBtn.classList.add('btn-hold');
+  document.getElementById('btn-single-done').classList.remove('hidden');
+}
+
+function endReveal() {
+  if (!isRevealed) return;
+  isRevealed = false;
+  document.getElementById('single-locked').style.display = 'block';
+  document.getElementById('single-revealed').style.display = 'none';
+  holdBtn.textContent = '👁 Hold to Reveal';
+  holdBtn.classList.remove('btn-hold');
+}
+
+holdBtn.addEventListener('mousedown', startReveal);
+holdBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startReveal(); }, { passive: false });
+holdBtn.addEventListener('mouseup', endReveal);
+holdBtn.addEventListener('mouseleave', endReveal);
+holdBtn.addEventListener('touchend', (e) => { e.preventDefault(); endReveal(); }, { passive: false });
+holdBtn.addEventListener('touchcancel', endReveal);
+
+document.getElementById('btn-single-done').addEventListener('click', () => {
+  endReveal();
+  singleCurrentIdx++;
+  if (singleCurrentIdx < singleRoles.length) {
+    showSinglePassScreen();
+  } else {
+    // All players done — go to discussion
+    const category = singleRoles[0].category;
+    document.getElementById('single-disc-category').textContent = category;
+    showScreen('screen-single-discussion');
+    setConfetti(false);
+  }
+});
+
+document.getElementById('btn-single-reveal').addEventListener('click', () => {
+  const imposters = singleRoles.filter(r => r.isImposter).map(r => r.name);
+  const word = singleRoles[0].word;
+  document.getElementById('single-reveal-the-word').textContent = word;
+  document.getElementById('single-reveal-imp-names').textContent = imposters.join(', ');
+  showScreen('screen-single-reveal');
+  setConfetti(true);
+});
+
+document.getElementById('btn-single-play-again').addEventListener('click', () => {
+  setConfetti(false);
+  showScreen('screen-single-setup');
+  initSingleSetup();
 });
 </script>
 </body>
