@@ -8,14 +8,6 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Redirect HTTP to HTTPS on Render (or any reverse proxy that sets x-forwarded-proto)
-app.use((req, res, next) => {
-  if (req.headers['x-forwarded-proto'] && req.headers['x-forwarded-proto'] !== 'https') {
-    return res.redirect(301, `https://${req.hostname}${req.url}`);
-  }
-  next();
-});
-
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Game State ──────────────────────────────────────────────
