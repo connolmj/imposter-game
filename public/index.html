@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Imposter! - The Party Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Base ──────────────────────────────────────── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'Nunito', sans-serif;
+  color: white;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  overflow-y: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Background ────────────────────────────────────────── */
+.bg {
+  position: fixed; inset: 0; z-index: -2;
+  background: linear-gradient(135deg, #6C3CE1 0%, #C850C0 50%, #FF6B9D 100%);
+}
+.bg::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(255,255,255,0.06) 0%, transparent 40%);
+}
+/* Floating bubbles */
+.bubble { position: fixed; border-radius: 50%; z-index: -1; background: rgba(255,255,255,0.05); animation: floatB 6s ease-in-out infinite; pointer-events: none; }
+.bubble:nth-child(1) { width: 80px; height: 80px; top: 8%; left: 5%; }
+.bubble:nth-child(2) { width: 50px; height: 50px; top: 55%; right: 8%; animation-delay: 1s; }
+.bubble:nth-child(3) { width: 120px; height: 120px; bottom: 12%; left: 12%; animation-delay: 2s; }
+.bubble:nth-child(4) { width: 40px; height: 40px; top: 30%; right: 3%; animation-delay: 3s; }
+@keyframes floatB { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-14px) scale(1.04); } }
+
+/* Confetti */
+.confetti-piece { position: fixed; z-index: -1; animation: confettiFall 5s linear infinite; pointer-events: none; opacity: 0; }
+.confetti-piece.active { opacity: 1; }
+@keyframes confettiFall {
+  0% { top: -10px; opacity: 1; transform: translateX(0) rotate(0deg); }
+  100% { top: 110vh; opacity: 0; transform: translateX(40px) rotate(420deg); }
+}
+
+/* ── Layout ────────────────────────────────────────────── */
+.screen {
+  display: none; flex-direction: column; align-items: center;
+  min-height: 100vh; min-height: -webkit-fill-available;
+  padding: 24px 20px 40px; overflow-y: auto;
+}
+.screen.active { display: flex; }
+
+/* ── Typography ────────────────────────────────────────── */
+.title { font-family: 'Baloo 2', cursive; font-size: 2.8rem; font-weight: 800; line-height: 1; text-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.subtitle { font-size: 1rem; font-weight: 700; color: rgba(255,255,255,0.7); margin-top: 4px; }
+
+/* ── Pill / Badge ──────────────────────────────────────── */
+.room-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 10px;
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-radius: 50px; padding: 8px 22px;
+  font-weight: 800; font-size: 1.1rem; letter-spacing: 5px;
+}
+.room-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #2ed573; box-shadow: 0 0 8px rgba(46,213,115,0.5); animation: blink 1.5s ease-in-out infinite; }
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* ── Inputs ────────────────────────────────────────────── */
+.input-group { width: 100%; max-width: 340px; margin-top: 16px; }
+.input-group label { display: block; font-weight: 800; font-size: 0.8rem; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.7); margin-bottom: 6px; }
+.input-field {
+  width: 100%; padding: 16px 20px;
+  font-family: 'Nunito', sans-serif; font-size: 1.1rem; font-weight: 700;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 2px solid rgba(255,255,255,0.25);
+  border-radius: 16px; color: white;
+  outline: none; transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.input-field::placeholder { color: rgba(255,255,255,0.4); }
+.input-field:focus { border-color: rgba(255,255,255,0.5); }
+.input-field.code-input { text-align: center; letter-spacing: 8px; font-size: 1.4rem; text-transform: uppercase; }
+
+/* ── Buttons ───────────────────────────────────────────── */
+.btn {
+  width: 100%; max-width: 340px; padding: 16px;
+  font-family: 'Baloo 2', cursive; font-size: 1.15rem; font-weight: 800;
+  color: white; background: rgba(255,255,255,0.22);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 3px solid rgba(255,255,255,0.35);
+  border-radius: 50px; cursor: pointer;
+  transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+  margin-top: 12px;
+}
+.btn:active { transform: scale(0.96); background: rgba(255,255,255,0.32); }
+.btn:disabled { opacity: 0.4; pointer-events: none; }
+.btn-solid {
+  background: white; color: #6C3CE1; border-color: white;
+}
+.btn-solid:active { background: #f0e6ff; }
+.btn-small { padding: 10px 20px; font-size: 0.95rem; width: auto; max-width: none; }
+.btn-danger { border-color: rgba(255,80,80,0.5); color: #ff8888; }
+
+/* ── Player List ───────────────────────────────────────── */
+.player-list { width: 100%; max-width: 340px; margin-top: 16px; }
+.player-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px; margin-bottom: 8px;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-radius: 16px;
+  animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
+}
+@keyframes slideIn { 0% { opacity: 0; transform: translateX(-20px); } 100% { opacity: 1; transform: translateX(0); } }
+.player-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 0.8rem;
+  border: 2px solid rgba(255,255,255,0.35);
+  flex-shrink: 0;
+}
+.player-name { font-weight: 800; font-size: 1rem; flex: 1; }
+.player-badge {
+  font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 1px; padding: 3px 10px; border-radius: 50px;
+  background: rgba(255,214,10,0.2); color: #FFD60A;
+}
+.player-badge.ready { background: rgba(46,213,115,0.2); color: #2ed573; }
+
+/* ── Settings Panel ────────────────────────────────────── */
+.settings-panel {
+  width: 100%; max-width: 340px; margin-top: 16px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 20px; padding: 20px;
+}
+.settings-panel h3 {
+  font-family: 'Baloo 2', cursive; font-size: 1.1rem; margin-bottom: 14px;
+  color: rgba(255,255,255,0.8);
+}
+.setting-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-label { font-weight: 700; font-size: 0.9rem; }
+.setting-control { display: flex; align-items: center; gap: 10px; }
+.stepper-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.2);
+  color: white; font-size: 1.2rem; font-weight: 800;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.stepper-btn:active { background: rgba(255,255,255,0.25); }
+.stepper-value { font-weight: 900; font-size: 1.1rem; min-width: 20px; text-align: center; }
+/* Toggle switch */
+.toggle { position: relative; width: 52px; height: 28px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0; cursor: pointer;
+  background: rgba(255,255,255,0.15); border-radius: 28px;
+  transition: 0.3s;
+}
+.toggle-slider::before {
+  content: ''; position: absolute;
+  width: 22px; height: 22px; left: 3px; bottom: 3px;
+  background: white; border-radius: 50%; transition: 0.3s;
+}
+.toggle input:checked + .toggle-slider { background: #2ed573; }
+.toggle input:checked + .toggle-slider::before { transform: translateX(24px); }
+
+/* ── Category Grid ─────────────────────────────────────── */
+.category-grid {
+  width: 100%; max-width: 340px; margin-top: 16px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.category-card {
+  padding: 20px 14px; border-radius: 18px;
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 2px solid rgba(255,255,255,0.15);
+  text-align: center; cursor: pointer;
+  transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+}
+.category-card:active { transform: scale(0.95); background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.4); }
+.category-card .emoji { font-size: 2rem; margin-bottom: 6px; }
+.category-card .cat-name { font-weight: 800; font-size: 0.85rem; }
+
+/* ── Word Card ─────────────────────────────────────────── */
+.word-card {
+  width: 100%; max-width: 340px; margin-top: 24px;
+  background: white; border-radius: 28px;
+  padding: 36px 24px; text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+  animation: bounceCard 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes bounceCard { 0% { transform: scale(0.7) translateY(30px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+.word-card .role-label {
+  font-size: 0.8rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 3px; color: #9b59b6;
+}
+.word-card .the-word {
+  font-family: 'Baloo 2', cursive; font-size: 2.8rem; font-weight: 800;
+  color: #2d3436; margin: 8px 0; line-height: 1.1;
+}
+.word-card .cat-pill {
+  display: inline-block;
+  background: linear-gradient(135deg, #6C3CE1, #C850C0);
+  color: white; font-weight: 800;
+  padding: 6px 20px; border-radius: 50px;
+  font-size: 0.8rem; letter-spacing: 1px;
+}
+.word-card .fun-emoji { font-size: 2.5rem; margin-top: 14px; animation: wiggle 2s ease-in-out infinite; }
+@keyframes wiggle { 0%,100% { transform: rotate(0deg); } 25% { transform: rotate(6deg); } 75% { transform: rotate(-6deg); } }
+
+/* Imposter variant */
+.word-card.imposter-card {
+  background: linear-gradient(135deg, #2d1f3d, #3d1f2f);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.35);
+}
+.word-card.imposter-card .role-label { color: #ff6b9d; }
+.word-card.imposter-card .the-word {
+  color: white;
+  background: linear-gradient(90deg, #FF6B9D, #FFD93D);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  font-size: 2.2rem;
+}
+.word-card.imposter-card .hint-box {
+  margin-top: 18px; padding: 14px;
+  background: rgba(255,255,255,0.08); border-radius: 16px;
+  color: rgba(255,255,255,0.7); font-size: 0.9rem; font-weight: 600;
+}
+.word-card.imposter-card .hint-box span { color: #FFD93D; font-weight: 800; }
+.word-card.imposter-card .no-hint {
+  margin-top: 18px; padding: 14px;
+  background: rgba(255,255,255,0.05); border-radius: 16px;
+  color: rgba(255,255,255,0.4); font-size: 0.85rem; font-style: italic;
+}
+
+/* ── Reveal Card ───────────────────────────────────────── */
+.reveal-card {
+  width: 100%; max-width: 340px; margin-top: 24px;
+  background: white; border-radius: 28px;
+  padding: 32px 24px; text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+  animation: bounceCard 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.reveal-card .reveal-label {
+  font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 3px; color: #9b59b6;
+}
+.reveal-card .reveal-word {
+  font-family: 'Baloo 2', cursive; font-size: 2.2rem; font-weight: 800;
+  color: #2d3436; margin: 6px 0;
+}
+.reveal-card .reveal-imposters {
+  margin-top: 14px; padding: 14px;
+  background: linear-gradient(135deg, rgba(255,107,157,0.1), rgba(255,217,61,0.1));
+  border-radius: 16px;
+}
+.reveal-card .reveal-imposters .imp-label {
+  font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 2px; color: #FF6B9D; margin-bottom: 6px;
+}
+.reveal-card .reveal-imposters .imp-names {
+  font-family: 'Baloo 2', cursive; font-size: 1.5rem; font-weight: 800;
+  color: #c0392b;
+}
+
+/* ── Toast ─────────────────────────────────────────────── */
+.toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  padding: 12px 24px; border-radius: 50px;
+  font-weight: 700; font-size: 0.9rem;
+  z-index: 100; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none; white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── Error text ────────────────────────────────────────── */
+.error-text { color: #FFD93D; font-weight: 700; font-size: 0.85rem; margin-top: 8px; text-align: center; max-width: 340px; }
+
+/* ── Utility ───────────────────────────────────────────── */
+.mt-8 { margin-top: 8px; } .mt-12 { margin-top: 12px; } .mt-16 { margin-top: 16px; } .mt-24 { margin-top: 24px; }
+.text-center { text-align: center; }
+.text-dim { color: rgba(255,255,255,0.5); }
+.text-sm { font-size: 0.85rem; }
+.gap-8 { gap: 8px; }
+.flex-row { display: flex; align-items: center; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="bg"></div>
+<div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
+
+<!-- Confetti pieces (activated during reveals) -->
+<div class="confetti-piece" style="left:8%;width:8px;height:8px;background:#FFD93D;border-radius:50%;animation-delay:0s;animation-duration:3.2s;"></div>
+<div class="confetti-piece" style="left:22%;width:6px;height:14px;background:#FF6B9D;border-radius:2px;animation-delay:0.4s;animation-duration:3.8s;"></div>
+<div class="confetti-piece" style="left:38%;width:10px;height:6px;background:#2ed573;border-radius:2px;animation-delay:0.9s;animation-duration:4.1s;"></div>
+<div class="confetti-piece" style="left:52%;width:7px;height:7px;background:#00d2ff;border-radius:50%;animation-delay:1.4s;animation-duration:3.5s;"></div>
+<div class="confetti-piece" style="left:68%;width:5px;height:12px;background:#ffa502;border-radius:2px;animation-delay:0.6s;animation-duration:4.4s;"></div>
+<div class="confetti-piece" style="left:82%;width:9px;height:5px;background:#C850C0;border-radius:2px;animation-delay:1.1s;animation-duration:3.9s;"></div>
+<div class="confetti-piece" style="left:92%;width:6px;height:6px;background:#FFD93D;border-radius:50%;animation-delay:1.8s;animation-duration:3.3s;"></div>
+<div class="confetti-piece" style="left:15%;width:8px;height:4px;background:#6C3CE1;border-radius:2px;animation-delay:2.1s;animation-duration:4.0s;"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SCREEN: HOME -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-home">
+  <div class="title mt-24">Imposter!</div>
+  <div class="subtitle">The Party Game</div>
+
+  <div class="input-group mt-24">
+    <label>Your Name</label>
+    <input class="input-field" id="home-name" type="text" placeholder="Enter your name" maxlength="16" autocomplete="off" />
+  </div>
+
+  <button class="btn btn-solid mt-16" id="btn-create">Create Game</button>
+
+  <div class="flex-row mt-24 gap-8 text-dim text-sm" style="width:100%;max-width:340px;">
+    <div style="flex:1;height:1px;background:rgba(255,255,255,0.2);"></div>
+    <span>or join a game</span>
+    <div style="flex:1;height:1px;background:rgba(255,255,255,0.2);"></div>
+  </div>
+
+  <div class="input-group mt-16">
+    <label>Room Code</label>
+    <input class="input-field code-input" id="home-code" type="text" placeholder="XXXX" maxlength="4" autocomplete="off" />
+  </div>
+
+  <button class="btn mt-12" id="btn-join">Join Game</button>
+  <div class="error-text hidden" id="home-error"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SCREEN: LOBBY -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-lobby">
+  <div class="title">Imposter!</div>
+  <div class="room-pill"><div class="dot"></div> <span id="lobby-code"></span></div>
+
+  <div class="player-list" id="lobby-players"></div>
+
+  <!-- Host settings -->
+  <div class="settings-panel" id="lobby-settings">
+    <h3>Game Settings</h3>
+    <div class="setting-row">
+      <span class="setting-label">Imposters</span>
+      <div class="setting-control">
+        <button class="stepper-btn" id="imp-minus">−</button>
+        <span class="stepper-value" id="imp-count">1</span>
+        <button class="stepper-btn" id="imp-plus">+</button>
+      </div>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label">Hints</span>
+      <label class="toggle">
+        <input type="checkbox" id="hints-toggle" checked />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Host: pick category to start -->
+  <div class="mt-16 text-center text-sm text-dim" id="lobby-pick-label">Pick a category to start the round</div>
+  <div class="category-grid" id="lobby-categories"></div>
+
+  <!-- Non-host: waiting message -->
+  <div class="mt-24 text-center text-dim hidden" id="lobby-waiting">
+    <div style="font-size:2rem;animation:wiggle 2s ease-in-out infinite;">🎮</div>
+    <div class="mt-8 text-sm">Waiting for host to start the round...</div>
+  </div>
+
+  <div class="error-text hidden mt-8" id="lobby-error"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SCREEN: PLAYING (word reveal) -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-playing">
+  <div class="title">Imposter!</div>
+  <div class="subtitle" id="playing-subtitle"></div>
+
+  <!-- Normal player card -->
+  <div class="word-card hidden" id="card-normal">
+    <div class="role-label">Your Word Is</div>
+    <div class="the-word" id="card-word"></div>
+    <div class="cat-pill" id="card-category"></div>
+  </div>
+
+  <!-- Imposter card -->
+  <div class="word-card imposter-card hidden" id="card-imposter">
+    <div class="role-label">Uh Oh...</div>
+    <div class="the-word">You're the Imposter!</div>
+    <div class="hint-box hidden" id="card-hint">
+      Psst... here's a hint:<br><span id="card-hint-text"></span>
+    </div>
+    <div class="no-hint hidden" id="card-no-hint">No hints this round. Good luck!</div>
+    <div class="fun-emoji">🕵️</div>
+  </div>
+
+  <button class="btn mt-24" id="btn-ready">I've Seen My Word!</button>
+
+  <!-- Host reveal button -->
+  <button class="btn btn-danger mt-12 hidden" id="btn-reveal">Reveal Imposter(s)</button>
+
+  <div class="player-list mt-16" id="playing-players"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SCREEN: REVEAL -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-reveal">
+  <div class="title">Round Over!</div>
+
+  <div class="reveal-card">
+    <div class="reveal-label">The Word Was</div>
+    <div class="reveal-word" id="reveal-word"></div>
+    <div class="reveal-imposters">
+      <div class="imp-label">The Imposter(s)</div>
+      <div class="imp-names" id="reveal-imposters"></div>
+    </div>
+  </div>
+
+  <button class="btn btn-solid mt-24 hidden" id="btn-next-round">Next Round</button>
+  <div class="mt-16 text-dim text-sm text-center hidden" id="reveal-waiting">Waiting for host to start next round...</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+// ── State ─────────────────────────────────────────────
+let myId = null;
+let roomCode = null;
+let isHost = false;
+let currentSettings = { imposterCount: 1, hintsEnabled: true };
+
+const CATEGORY_EMOJIS = {
+  'Animals': '🐾', 'Food & Drinks': '🍕', 'Places': '🗺️',
+  'Jobs & Professions': '💼', 'Movies & TV': '🎬',
+  'Sports & Hobbies': '⚽', 'Brands & Products': '🏷️', 'Everyday Things': '🔑'
+};
+
+// ── Helpers ───────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function showError(elId, msg) {
+  const el = document.getElementById(elId);
+  el.textContent = msg; el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 4000);
+}
+
+function setConfetti(on) {
+  document.querySelectorAll('.confetti-piece').forEach(c => {
+    c.classList.toggle('active', on);
+  });
+}
+
+function getInitials(name) {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function renderPlayerList(containerId, players) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  players.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'player-item';
+    div.style.animationDelay = `${i * 0.05}s`;
+    div.innerHTML = `
+      <div class="player-avatar">${getInitials(p.name)}</div>
+      <span class="player-name">${esc(p.name)}</span>
+      ${p.isHost ? '<span class="player-badge">Host</span>' : ''}
+      ${p.ready ? '<span class="player-badge ready">Ready</span>' : ''}
+    `;
+    c.appendChild(div);
+  });
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ── HOME SCREEN ──────────────────────────────────────
+document.getElementById('btn-create').addEventListener('click', () => {
+  const name = document.getElementById('home-name').value.trim();
+  if (!name) return showError('home-error', 'Please enter your name!');
+  socket.emit('create-room', name, (res) => {
+    if (res.success) {
+      myId = res.playerId; roomCode = res.roomCode; isHost = true;
+      document.getElementById('lobby-code').textContent = roomCode;
+      showScreen('screen-lobby');
+      setupLobbyForHost();
+      loadCategories();
+    }
+  });
+});
+
+document.getElementById('btn-join').addEventListener('click', () => {
+  const name = document.getElementById('home-name').value.trim();
+  const code = document.getElementById('home-code').value.trim();
+  if (!name) return showError('home-error', 'Please enter your name!');
+  if (!code) return showError('home-error', 'Please enter a room code!');
+  socket.emit('join-room', { name, code }, (res) => {
+    if (res.success) {
+      myId = res.playerId; roomCode = res.roomCode; isHost = false;
+      document.getElementById('lobby-code').textContent = roomCode;
+      showScreen('screen-lobby');
+      setupLobbyForPlayer();
+    } else {
+      showError('home-error', res.error);
+    }
+  });
+});
+
+// Allow enter key
+document.getElementById('home-code').addEventListener('keyup', (e) => {
+  if (e.key === 'Enter') document.getElementById('btn-join').click();
+});
+document.getElementById('home-name').addEventListener('keyup', (e) => {
+  if (e.key === 'Enter') {
+    const code = document.getElementById('home-code').value.trim();
+    if (code) document.getElementById('btn-join').click();
+    else document.getElementById('btn-create').click();
+  }
+});
+
+// ── LOBBY SETUP ─────────────────────────────────────
+function setupLobbyForHost() {
+  document.getElementById('lobby-settings').classList.remove('hidden');
+  document.getElementById('lobby-pick-label').classList.remove('hidden');
+  document.getElementById('lobby-categories').classList.remove('hidden');
+  document.getElementById('lobby-waiting').classList.add('hidden');
+}
+
+function setupLobbyForPlayer() {
+  document.getElementById('lobby-settings').classList.add('hidden');
+  document.getElementById('lobby-pick-label').classList.add('hidden');
+  document.getElementById('lobby-categories').classList.add('hidden');
+  document.getElementById('lobby-waiting').classList.remove('hidden');
+}
+
+// Settings controls
+document.getElementById('imp-minus').addEventListener('click', () => {
+  if (currentSettings.imposterCount > 1) {
+    currentSettings.imposterCount--;
+    document.getElementById('imp-count').textContent = currentSettings.imposterCount;
+    socket.emit('update-settings', currentSettings);
+  }
+});
+document.getElementById('imp-plus').addEventListener('click', () => {
+  if (currentSettings.imposterCount < 3) {
+    currentSettings.imposterCount++;
+    document.getElementById('imp-count').textContent = currentSettings.imposterCount;
+    socket.emit('update-settings', currentSettings);
+  }
+});
+document.getElementById('hints-toggle').addEventListener('change', (e) => {
+  currentSettings.hintsEnabled = e.target.checked;
+  socket.emit('update-settings', currentSettings);
+});
+
+function loadCategories() {
+  socket.emit('get-categories', (cats) => {
+    const grid = document.getElementById('lobby-categories');
+    grid.innerHTML = '';
+    cats.forEach(cat => {
+      const card = document.createElement('div');
+      card.className = 'category-card';
+      card.innerHTML = `<div class="emoji">${CATEGORY_EMOJIS[cat] || '🎲'}</div><div class="cat-name">${esc(cat)}</div>`;
+      card.addEventListener('click', () => {
+        socket.emit('start-round', cat, (res) => {
+          if (!res.success) showError('lobby-error', res.error);
+        });
+      });
+      grid.appendChild(card);
+    });
+  });
+}
+
+// ── PLAYING SCREEN ──────────────────────────────────
+document.getElementById('btn-ready').addEventListener('click', () => {
+  socket.emit('player-ready');
+  document.getElementById('btn-ready').disabled = true;
+  document.getElementById('btn-ready').textContent = 'Waiting for others...';
+});
+
+document.getElementById('btn-reveal').addEventListener('click', () => {
+  socket.emit('reveal', (res) => {});
+});
+
+// ── REVEAL SCREEN ───────────────────────────────────
+document.getElementById('btn-next-round').addEventListener('click', () => {
+  socket.emit('back-to-lobby');
+});
+
+// ── SOCKET EVENTS ───────────────────────────────────
+socket.on('player-list', (players) => {
+  renderPlayerList('lobby-players', players);
+  renderPlayerList('playing-players', players);
+});
+
+socket.on('player-joined', (data) => showToast(`${data.name} joined!`));
+socket.on('player-left', (data) => showToast(`${data.name} left`));
+
+socket.on('you-are-host', () => {
+  isHost = true;
+  showToast("You're now the host!");
+  const screen = document.querySelector('.screen.active');
+  if (screen.id === 'screen-lobby') {
+    setupLobbyForHost();
+    loadCategories();
+  }
+  if (screen.id === 'screen-playing') {
+    document.getElementById('btn-reveal').classList.remove('hidden');
+  }
+  if (screen.id === 'screen-reveal') {
+    document.getElementById('btn-next-round').classList.remove('hidden');
+    document.getElementById('reveal-waiting').classList.add('hidden');
+  }
+});
+
+socket.on('settings-updated', (settings) => {
+  currentSettings = settings;
+  document.getElementById('imp-count').textContent = settings.imposterCount;
+  document.getElementById('hints-toggle').checked = settings.hintsEnabled;
+});
+
+socket.on('round-started', (data) => {
+  showScreen('screen-playing');
+  setConfetti(false);
+
+  document.getElementById('playing-subtitle').textContent =
+    `${data.playerCount} players · ${data.imposterCount} imposter${data.imposterCount > 1 ? 's' : ''}`;
+
+  const normalCard = document.getElementById('card-normal');
+  const imposterCard = document.getElementById('card-imposter');
+  const btnReady = document.getElementById('btn-ready');
+  const btnReveal = document.getElementById('btn-reveal');
+
+  btnReady.disabled = false;
+  btnReady.textContent = "I've Seen My Word!";
+
+  if (data.isImposter) {
+    normalCard.classList.add('hidden');
+    imposterCard.classList.remove('hidden');
+    if (data.hint) {
+      document.getElementById('card-hint').classList.remove('hidden');
+      document.getElementById('card-no-hint').classList.add('hidden');
+      document.getElementById('card-hint-text').textContent = data.hint;
+    } else {
+      document.getElementById('card-hint').classList.add('hidden');
+      document.getElementById('card-no-hint').classList.remove('hidden');
+    }
+  } else {
+    imposterCard.classList.add('hidden');
+    normalCard.classList.remove('hidden');
+    document.getElementById('card-word').textContent = data.word;
+    document.getElementById('card-category').textContent = data.category;
+  }
+
+  if (isHost) {
+    btnReveal.classList.remove('hidden');
+  } else {
+    btnReveal.classList.add('hidden');
+  }
+});
+
+socket.on('round-reveal', (data) => {
+  showScreen('screen-reveal');
+  setConfetti(true);
+  document.getElementById('reveal-word').textContent = data.word;
+  document.getElementById('reveal-imposters').textContent = data.imposters.join(', ');
+
+  if (isHost) {
+    document.getElementById('btn-next-round').classList.remove('hidden');
+    document.getElementById('reveal-waiting').classList.add('hidden');
+  } else {
+    document.getElementById('btn-next-round').classList.add('hidden');
+    document.getElementById('reveal-waiting').classList.remove('hidden');
+  }
+});
+
+socket.on('back-to-lobby', () => {
+  showScreen('screen-lobby');
+  setConfetti(false);
+  if (isHost) {
+    setupLobbyForHost();
+    loadCategories();
+  } else {
+    setupLobbyForPlayer();
+  }
+});
+
+socket.on('disconnect', () => {
+  showToast('Disconnected from server');
+});
+</script>
+</body>
+</html>
