@@ -231,27 +231,33 @@ body {
 
 /* Imposter variant */
 .word-card.imposter-card {
-  background: linear-gradient(135deg, #2d1f3d, #3d1f2f);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.35);
+  background: linear-gradient(135deg, #b71c1c, #c62828);
+  box-shadow: 0 16px 48px rgba(183,28,28,0.45);
 }
-.word-card.imposter-card .role-label { color: #ff6b9d; }
+.word-card.imposter-card .role-label { color: rgba(255,255,255,0.75); letter-spacing: 3px; }
 .word-card.imposter-card .the-word {
   color: white;
-  background: linear-gradient(90deg, #FF6B9D, #FFD93D);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  font-size: 2.2rem;
+  -webkit-text-fill-color: white;
+  font-size: 2rem;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }
 .word-card.imposter-card .hint-box {
-  margin-top: 18px; padding: 14px;
-  background: rgba(255,255,255,0.16); border-radius: 16px;
-  color: rgba(255,255,255,0.95); font-size: 0.9rem; font-weight: 700;
-  border: 1px solid rgba(255,255,255,0.15);
+  margin-top: 18px; padding: 16px;
+  background: rgba(0,0,0,0.25); border-radius: 16px;
+  color: white; font-size: 0.95rem; font-weight: 700;
+  border: 1px solid rgba(255,255,255,0.2);
+  text-align: left; line-height: 1.5;
 }
-.word-card.imposter-card .hint-box span { color: #FFD93D; font-weight: 800; }
+.word-card.imposter-card .hint-label {
+  display: block; font-size: 0.65rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 2px;
+  color: rgba(255,255,255,0.6); margin-bottom: 6px;
+}
+.word-card.imposter-card .hint-text { color: #FFD93D; font-size: 1rem; font-weight: 800; }
 .word-card.imposter-card .no-hint {
   margin-top: 18px; padding: 14px;
-  background: rgba(255,255,255,0.05); border-radius: 16px;
-  color: rgba(255,255,255,0.4); font-size: 0.85rem; font-style: italic;
+  background: rgba(0,0,0,0.15); border-radius: 16px;
+  color: rgba(255,255,255,0.5); font-size: 0.85rem; font-style: italic;
 }
 
 /* ── Reveal Card ───────────────────────────────────────── */
@@ -414,7 +420,7 @@ body {
 <!-- ═══════════════════════════════════════════════════════ -->
 <div class="screen" id="screen-home">
   <button class="htp-btn" onclick="openHTP()">❓ How to Play</button>
-  <button class="back-btn" onclick="showScreen('screen-mode')">← Back</button>
+  <button class="back-btn" onclick="sessionStorage.removeItem('imposter-session');showScreen('screen-mode')">← Back</button>
 
   <div class="title mt-52">Imposter!</div>
   <div class="subtitle">Everyone's Phone</div>
@@ -482,7 +488,10 @@ body {
     </div>
   </div>
 
-  <div class="mt-16 text-center text-sm text-dim">Select categories</div>
+  <div class="mt-16" style="width:100%;max-width:340px;display:flex;justify-content:space-between;align-items:center;">
+    <span class="text-sm text-dim">Select categories</span>
+    <button id="btn-single-select-all" onclick="toggleSelectAllSingle()" style="font-family:'Nunito',sans-serif;font-size:0.75rem;font-weight:800;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.2);border-radius:50px;padding:6px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Select All</button>
+  </div>
   <div class="category-grid" id="single-categories"></div>
   <button class="btn btn-solid mt-12 hidden" id="btn-single-start">Start Game 🎉</button>
 </div>
@@ -506,7 +515,7 @@ body {
       <div class="role-label" id="single-reveal-role-label">Your Word Is</div>
       <div class="the-word" id="single-reveal-word"></div>
       <div class="cat-pill" id="single-reveal-cat" style="margin-top:8px;"></div>
-      <div class="hint-box hidden" id="single-reveal-hint" style="margin-top:14px;padding:12px;background:rgba(255,255,255,0.16);border-radius:12px;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.95);font-size:0.85rem;font-weight:700;"></div>
+      <div class="hint-box hidden" id="single-reveal-hint" style="margin-top:14px;"></div>
     </div>
   </div>
 
@@ -538,6 +547,10 @@ body {
       <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#9b59b6;">Category</div>
       <div style="font-family:'Baloo 2',cursive;font-size:1.2rem;font-weight:800;color:#2d3436;margin-top:4px;" id="single-disc-category"></div>
     </div>
+    <div style="margin-top:14px;padding:12px;background:linear-gradient(135deg,rgba(46,213,115,0.08),rgba(0,210,255,0.08));border-radius:12px;">
+      <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#27ae60;">Goes First</div>
+      <div style="font-family:'Baloo 2',cursive;font-size:1.2rem;font-weight:800;color:#2d3436;margin-top:4px;" id="single-disc-first">🎲 ...</div>
+    </div>
   </div>
 
   <button class="btn btn-danger mt-24" id="btn-single-reveal">Reveal the Imposter(s) 🎭</button>
@@ -559,7 +572,7 @@ body {
   </div>
 
   <button class="btn btn-solid mt-24" id="btn-single-play-again">Play Again 🔄</button>
-  <button class="btn mt-12" onclick="showScreen('screen-mode')">Back to Home</button>
+  <button class="btn mt-12" onclick="sessionStorage.removeItem('imposter-session');showScreen('screen-mode')">Back to Home</button>
 </div>
 
 <!-- How to Play Modal -->
@@ -624,7 +637,10 @@ body {
   </div>
 
   <!-- Host: pick categories to start -->
-  <div class="mt-16 text-center text-sm text-dim" id="lobby-pick-label">Select one or more categories</div>
+  <div class="mt-16" style="width:100%;max-width:340px;display:flex;justify-content:space-between;align-items:center;" id="lobby-pick-label">
+    <span class="text-sm text-dim">Select one or more categories</span>
+    <button id="btn-lobby-select-all" onclick="toggleSelectAllLobby()" style="font-family:'Nunito',sans-serif;font-size:0.75rem;font-weight:800;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.2);border-radius:50px;padding:6px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Select All</button>
+  </div>
   <div class="category-grid" id="lobby-categories"></div>
   <button class="btn btn-solid mt-12 hidden" id="btn-start-round">Start Round 🎉</button>
 
@@ -654,16 +670,21 @@ body {
 
   <!-- Imposter card -->
   <div class="word-card imposter-card hidden" id="card-imposter">
-    <div class="role-label">Uh Oh...</div>
-    <div class="the-word">You're the Imposter!</div>
+    <div class="role-label">You Are</div>
+    <div class="the-word">The Imposter! 🕵️</div>
     <div class="hint-box hidden" id="card-hint">
-      Psst... here's a hint:<br><span id="card-hint-text"></span>
+      <span class="hint-label">Hint</span>
+      <span class="hint-text" id="card-hint-text"></span>
     </div>
-    <div class="no-hint hidden" id="card-no-hint">No hints this round. Good luck!</div>
-    <div class="fun-emoji">🕵️</div>
+    <div class="no-hint hidden" id="card-no-hint">No hints this round. Blend in!</div>
   </div>
 
-  <button class="btn mt-24" id="btn-ready">I've Seen My Word!</button>
+  <!-- First hint player chip -->
+  <div class="hidden" id="first-hint-chip" style="margin-top:16px;padding:10px 18px;background:rgba(255,255,255,0.15);border-radius:50px;font-size:0.85rem;font-weight:800;text-align:center;backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,0.25);">
+    🎲 <span id="first-hint-name"></span> gives the first hint!
+  </div>
+
+  <button class="btn mt-16" id="btn-ready">I've Seen My Word!</button>
 
   <!-- Host reveal button -->
   <button class="btn btn-danger mt-12 hidden" id="btn-reveal">Reveal Imposter(s)</button>
@@ -693,13 +714,21 @@ body {
 <!-- ═══════════════════════════════════════════════════════ -->
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io();
+// ── Socket with reconnection tuning ───────────────────
+const socket = io({
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: 20000
+});
 
 // ── State ─────────────────────────────────────────────
 let myId = null;
 let roomCode = null;
 let isHost = false;
 let currentSettings = { imposterCount: 1, hintsEnabled: true };
+let wasConnected = false; // track reconnects vs initial connect
 
 const CATEGORY_EMOJIS = {
   'Animals': '🐾', 'Food & Drinks': '🍕', 'Places': '🗺️',
@@ -763,6 +792,7 @@ document.getElementById('btn-create').addEventListener('click', () => {
   socket.emit('create-room', name, (res) => {
     if (res.success) {
       myId = res.playerId; roomCode = res.roomCode; isHost = true;
+      sessionStorage.setItem('imposter-session', JSON.stringify({ rc: res.roomCode, pn: name }));
       document.getElementById('lobby-code').textContent = roomCode;
       showScreen('screen-lobby');
       setupLobbyForHost();
@@ -779,6 +809,7 @@ document.getElementById('btn-join').addEventListener('click', () => {
   socket.emit('join-room', { name, code }, (res) => {
     if (res.success) {
       myId = res.playerId; roomCode = res.roomCode; isHost = false;
+      sessionStorage.setItem('imposter-session', JSON.stringify({ rc: res.roomCode, pn: name }));
       document.getElementById('lobby-code').textContent = roomCode;
       showScreen('screen-lobby');
       setupLobbyForPlayer();
@@ -875,6 +906,32 @@ function loadCategories() {
   });
 }
 
+function toggleSelectAllLobby() {
+  const cards = document.querySelectorAll('#lobby-categories .category-card');
+  const allSelected = selectedCategories.size === cards.length;
+  cards.forEach(card => {
+    const cat = card.querySelector('.cat-name').textContent;
+    if (allSelected) {
+      selectedCategories.delete(cat);
+      card.classList.remove('selected');
+    } else {
+      selectedCategories.add(cat);
+      card.classList.add('selected');
+    }
+  });
+  const btn = document.getElementById('btn-start-round');
+  const saBtn = document.getElementById('btn-lobby-select-all');
+  if (selectedCategories.size > 0) {
+    const count = selectedCategories.size;
+    btn.textContent = count === 1 ? 'Start Round 🎉' : `Start Round (${count} categories) 🎉`;
+    btn.classList.remove('hidden');
+    saBtn.textContent = 'Deselect All';
+  } else {
+    btn.classList.add('hidden');
+    saBtn.textContent = 'Select All';
+  }
+}
+
 document.getElementById('btn-start-round').addEventListener('click', () => {
   if (selectedCategories.size === 0) return;
   socket.emit('start-round', Array.from(selectedCategories), (res) => {
@@ -898,14 +955,83 @@ document.getElementById('btn-next-round').addEventListener('click', () => {
   socket.emit('back-to-lobby');
 });
 
+// ── RECONNECTION ─────────────────────────────────────
+socket.on('connect', () => {
+  if (!wasConnected) { wasConnected = true; return; } // initial connect, do nothing
+  // This is a reconnect — try to restore session
+  const stored = sessionStorage.getItem('imposter-session');
+  if (!stored) return;
+  const { rc, pn } = JSON.parse(stored);
+  showToast('Reconnecting... 🔄');
+  socket.emit('rejoin-room', { name: pn, code: rc }, (res) => {
+    if (res.success) {
+      myId = res.playerId;
+      roomCode = res.roomCode;
+      isHost = res.isHost;
+      document.getElementById('lobby-code').textContent = roomCode;
+      showToast(`Back in the game! 👋`);
+      if (res.gameState === 'lobby') {
+        showScreen('screen-lobby');
+        if (res.isHost) { setupLobbyForHost(); loadCategories(); }
+        else setupLobbyForPlayer();
+      } else if (res.gameState === 'playing' && res.roundData) {
+        showScreen('screen-playing');
+        // Re-render the round UI using saved data
+        const data = res.roundData;
+        document.getElementById('playing-subtitle').textContent =
+          `${data.playerCount} players · ${data.imposterCount} imposter${data.imposterCount > 1 ? 's' : ''}`;
+        const normalCard = document.getElementById('card-normal');
+        const imposterCard = document.getElementById('card-imposter');
+        document.getElementById('btn-ready').disabled = false;
+        document.getElementById('btn-ready').textContent = "I've Seen My Word!";
+        if (data.isImposter) {
+          normalCard.classList.add('hidden');
+          imposterCard.classList.remove('hidden');
+          if (data.hint) {
+            document.getElementById('card-hint').classList.remove('hidden');
+            document.getElementById('card-no-hint').classList.add('hidden');
+            document.getElementById('card-hint-text').textContent = data.hint;
+          } else {
+            document.getElementById('card-hint').classList.add('hidden');
+            document.getElementById('card-no-hint').classList.remove('hidden');
+          }
+        } else {
+          imposterCard.classList.add('hidden');
+          normalCard.classList.remove('hidden');
+          document.getElementById('card-word').textContent = data.word;
+          document.getElementById('card-category').textContent = data.category;
+        }
+        if (data.firstHintName) {
+          document.getElementById('first-hint-name').textContent = data.firstHintName;
+          document.getElementById('first-hint-chip').classList.remove('hidden');
+        }
+        if (res.isHost) document.getElementById('btn-reveal').classList.remove('hidden');
+      } else if (res.gameState === 'reveal') {
+        showScreen('screen-lobby');
+        if (res.isHost) { setupLobbyForHost(); loadCategories(); }
+        else setupLobbyForPlayer();
+      }
+    } else {
+      sessionStorage.removeItem('imposter-session');
+      showToast('Could not reconnect — please rejoin');
+    }
+  });
+});
+
+socket.on('disconnect', () => {
+  showToast('Connection lost — trying to reconnect...');
+});
+
 // ── SOCKET EVENTS ───────────────────────────────────
 socket.on('player-list', (players) => {
-  renderPlayerList('lobby-players', players);
-  renderPlayerList('playing-players', players);
+  renderPlayerList('lobby-players', players.filter(p => !p.disconnected));
+  renderPlayerList('playing-players', players.filter(p => !p.disconnected));
 });
 
 socket.on('player-joined', (data) => showToast(`${data.name} joined!`));
 socket.on('player-left', (data) => showToast(`${data.name} left`));
+socket.on('player-disconnected', (data) => showToast(`${data.name} disconnected — waiting 45s...`));
+socket.on('player-rejoined', (data) => showToast(`${data.name} reconnected! 👋`));
 
 socket.on('you-are-host', () => {
   isHost = true;
@@ -968,6 +1094,15 @@ socket.on('round-started', (data) => {
   } else {
     btnReveal.classList.add('hidden');
   }
+
+  // Show who gives the first hint
+  const chip = document.getElementById('first-hint-chip');
+  if (data.firstHintName) {
+    document.getElementById('first-hint-name').textContent = data.firstHintName;
+    chip.classList.remove('hidden');
+  } else {
+    chip.classList.add('hidden');
+  }
 });
 
 socket.on('round-reveal', (data) => {
@@ -997,9 +1132,7 @@ socket.on('back-to-lobby', () => {
   }
 });
 
-socket.on('disconnect', () => {
-  showToast('Disconnected from server');
-});
+// (disconnect handler defined above in reconnection section)
 
 // ── MODE SELECT ──────────────────────────────────────
 document.getElementById('mode-single').addEventListener('click', () => {
@@ -1060,6 +1193,23 @@ function initSingleSetup() {
       grid.appendChild(card);
     });
   });
+}
+
+function toggleSelectAllSingle() {
+  const cards = document.querySelectorAll('#single-categories .category-card');
+  const allSelected = singleSelectedCats.size === cards.length;
+  cards.forEach(card => {
+    const cat = card.querySelector('.cat-name').textContent;
+    if (allSelected) {
+      singleSelectedCats.delete(cat);
+      card.classList.remove('selected');
+    } else {
+      singleSelectedCats.add(cat);
+      card.classList.add('selected');
+    }
+  });
+  document.getElementById('btn-single-select-all').textContent = allSelected ? 'Select All' : 'Deselect All';
+  updateSingleStartBtn();
 }
 
 function updateSingleStartBtn() {
@@ -1169,32 +1319,50 @@ function showSinglePassScreen() {
     `Player ${singleCurrentIdx + 1} of ${singleRoles.length}`;
 
   // Reset card to locked state
+  const passCard = document.getElementById('single-pass-card');
   document.getElementById('single-locked').style.display = 'block';
   document.getElementById('single-revealed').style.display = 'none';
   document.getElementById('btn-hold-reveal').textContent = '👁 Hold to Reveal';
   document.getElementById('btn-hold-reveal').classList.remove('btn-hold');
   document.getElementById('btn-single-done').classList.add('hidden');
 
+  // Apply imposter card styling if applicable
+  if (player.isImposter) {
+    passCard.classList.add('imposter-card');
+    // Lock icon and instructions need to stay legible on red bg
+    document.getElementById('single-pass-name').style.color = 'white';
+    document.getElementById('single-locked').querySelectorAll('div').forEach(d => {
+      if (d.id !== 'single-pass-name') d.style.color = 'rgba(255,255,255,0.75)';
+    });
+  } else {
+    passCard.classList.remove('imposter-card');
+    document.getElementById('single-pass-name').style.color = '#2d3436';
+    document.getElementById('single-locked').querySelectorAll('div').forEach(d => {
+      d.style.color = '';
+    });
+  }
+
   // Pre-populate revealed state (hidden)
   if (player.isImposter) {
-    document.getElementById('single-reveal-role-label').textContent = 'Uh Oh...';
-    document.getElementById('single-reveal-word').textContent = "You're the Imposter!";
+    document.getElementById('single-reveal-role-label').textContent = 'You Are';
+    document.getElementById('single-reveal-role-label').style.cssText = '';
+    document.getElementById('single-reveal-word').textContent = 'The Imposter! 🕵️';
     document.getElementById('single-reveal-word').style.cssText =
-      "font-family:'Baloo 2',cursive;font-size:2rem;font-weight:800;background:linear-gradient(90deg,#FF6B9D,#FFD93D);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:8px 0;line-height:1.1;";
+      "font-family:'Baloo 2',cursive;font-size:1.9rem;font-weight:800;color:white;-webkit-text-fill-color:white;margin:8px 0;line-height:1.1;text-shadow:0 2px 8px rgba(0,0,0,0.2);";
     document.getElementById('single-reveal-cat').style.display = 'none';
     const hintBox = document.getElementById('single-reveal-hint');
     if (singleSettings.hintsEnabled && player.hint) {
-      hintBox.innerHTML = `Psst... here's a hint: <strong style="color:#FFD93D">${esc(player.hint)}</strong>`;
+      hintBox.innerHTML = `<span class="hint-label">Hint</span><span class="hint-text">${esc(player.hint)}</span>`;
       hintBox.classList.remove('hidden');
-      hintBox.style.background = 'rgba(255,255,255,0.16)';
     } else {
       hintBox.classList.add('hidden');
     }
   } else {
     document.getElementById('single-reveal-role-label').textContent = 'Your Word Is';
+    document.getElementById('single-reveal-role-label').style.cssText = '';
     document.getElementById('single-reveal-word').textContent = player.word;
     document.getElementById('single-reveal-word').style.cssText =
-      "font-family:'Baloo 2',cursive;font-size:2.8rem;font-weight:800;color:#2d3436;margin:8px 0;line-height:1.1;";
+      "font-family:'Baloo 2',cursive;font-size:2.8rem;font-weight:800;color:#2d3436;-webkit-text-fill-color:#2d3436;margin:8px 0;line-height:1.1;";
     const catPill = document.getElementById('single-reveal-cat');
     catPill.textContent = player.category;
     catPill.style.display = 'inline-block';
@@ -1240,6 +1408,10 @@ document.getElementById('btn-single-done').addEventListener('click', () => {
     // All players done — go to discussion
     const category = singleRoles[0].category;
     document.getElementById('single-disc-category').textContent = category;
+    // Pick a random non-imposter to go first
+    const nonImposters = singleRoles.filter(r => !r.isImposter);
+    const firstUp = nonImposters[Math.floor(Math.random() * nonImposters.length)];
+    document.getElementById('single-disc-first').textContent = `🎲 ${firstUp ? firstUp.name : singleRoles[0].name} goes first!`;
     showScreen('screen-single-discussion');
     setConfetti(false);
   }

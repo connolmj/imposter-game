@@ -6,7 +6,13 @@ const WORDS = require('./words');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+
+// Tune ping/pong to survive mobile browser backgrounding
+const io = new Server(server, {
+  pingTimeout: 60000,    // wait 60s for a pong before considering dead
+  pingInterval: 25000,   // send a ping every 25s
+  connectTimeout: 45000
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -26,12 +32,14 @@ function createRoom(hostSocket, hostName) {
     code,
     hostId: hostSocket.id,
     players: new Map(), // socketId -> { name, ready }
+    disconnectedPlayers: new Map(), // name -> { prevSocketId, wasHost, roundData, ready, timeout }
     state: 'lobby', // lobby | playing | reveal
     settings: {
       imposterCount: 1,
       hintsEnabled: true
     },
     currentRound: null, // { category, wordEntry, imposters: Set<socketId> }
+    playerRoundData: new Map(), // socketId -> { isImposter, word, category, hint, ... }
     roundHistory: []
   };
   room.players.set(hostSocket.id, { name: hostName, ready: false });
@@ -44,6 +52,10 @@ function getPlayerList(room) {
   for (const [id, p] of room.players) {
     list.push({ id, name: p.name, isHost: id === room.hostId, ready: p.ready });
   }
+  // Show disconnected players too (greyed out on client)
+  for (const [name] of room.disconnectedPlayers) {
+    list.push({ id: null, name, isHost: false, ready: false, disconnected: true });
+  }
   return list;
 }
 
@@ -52,10 +64,8 @@ function getCategories() {
 }
 
 function startRound(room, categories) {
-  // Accept a single category string or an array of categories
   const catArray = Array.isArray(categories) ? categories : [categories];
 
-  // Build combined word pool from all selected categories
   const pool = [];
   for (const cat of catArray) {
     if (WORDS[cat]) {
@@ -67,18 +77,35 @@ function startRound(room, categories) {
   const wordEntry = pool[Math.floor(Math.random() * pool.length)];
   const playerIds = Array.from(room.players.keys());
 
-  // Shuffle and pick imposters
   const shuffled = [...playerIds].sort(() => Math.random() - 0.5);
   const imposterCount = Math.min(room.settings.imposterCount, Math.floor(playerIds.length / 2));
   const imposters = new Set(shuffled.slice(0, imposterCount));
 
-  room.currentRound = { category: wordEntry.category, wordEntry, imposters };
+  // Pick a random non-imposter to give the first hint
+  const nonImposters = playerIds.filter(id => !imposters.has(id));
+  const firstHintId = nonImposters[Math.floor(Math.random() * nonImposters.length)];
+  const firstHintName = room.players.get(firstHintId)?.name || '';
+
+  room.currentRound = { category: wordEntry.category, wordEntry, imposters, firstHintName };
   room.state = 'playing';
+  room.playerRoundData = new Map();
 
-  // Reset ready states
-  for (const [, p] of room.players) p.ready = false;
+  // Reset ready states and cache per-player round data
+  for (const [id, p] of room.players) {
+    p.ready = false;
+    const isImposter = imposters.has(id);
+    room.playerRoundData.set(id, {
+      isImposter,
+      word: isImposter ? null : wordEntry.word,
+      category: wordEntry.category,
+      hint: (isImposter && room.settings.hintsEnabled) ? wordEntry.hint : null,
+      imposterCount: imposters.size,
+      playerCount: room.players.size,
+      firstHintName
+    });
+  }
 
-  return { category: wordEntry.category, wordEntry, imposters };
+  return { category: wordEntry.category, wordEntry, imposters, firstHintName };
 }
 
 // ── Socket Events ───────────────────────────────────────────
@@ -102,7 +129,6 @@ io.on('connection', (socket) => {
     if (room.players.size >= 15) return callback({ success: false, error: 'Room is full (15 players max).' });
     if (room.state !== 'lobby') return callback({ success: false, error: 'Game already in progress.' });
 
-    // Check duplicate name
     for (const [, p] of room.players) {
       if (p.name.toLowerCase() === name.toLowerCase()) {
         return callback({ success: false, error: 'That name is already taken in this room.' });
@@ -114,6 +140,64 @@ io.on('connection', (socket) => {
     callback({ success: true, roomCode: code, playerId: socket.id, isHost: false });
     io.to(code).emit('player-list', getPlayerList(room));
     io.to(code).emit('player-joined', { name });
+  });
+
+  // REJOIN ROOM (after disconnect/reconnect)
+  socket.on('rejoin-room', (data, callback) => {
+    const code = (data.code || '').toUpperCase().trim();
+    const name = (data.name || '').trim();
+    const room = rooms.get(code);
+
+    if (!room) return callback({ success: false, error: 'Room no longer exists.' });
+
+    const disconnected = room.disconnectedPlayers.get(name);
+    if (!disconnected) {
+      // Check if they're still active (double-connect scenario)
+      for (const [id, p] of room.players) {
+        if (p.name.toLowerCase() === name.toLowerCase()) {
+          // Transfer session to new socket
+          const oldPlayer = room.players.get(id);
+          room.players.delete(id);
+          room.players.set(socket.id, { name: oldPlayer.name, ready: oldPlayer.ready });
+          if (room.hostId === id) room.hostId = socket.id;
+          socket.join(code);
+          const rd = room.playerRoundData.get(id);
+          room.playerRoundData.delete(id);
+          if (rd) room.playerRoundData.set(socket.id, rd);
+          io.to(room.code).emit('player-list', getPlayerList(room));
+          return callback({
+            success: true, roomCode: code, playerId: socket.id,
+            isHost: room.hostId === socket.id, gameState: room.state,
+            roundData: rd || null
+          });
+        }
+      }
+      return callback({ success: false, error: 'Reconnect window expired. Please rejoin.' });
+    }
+
+    // Restore from disconnected list
+    clearTimeout(disconnected.timeout);
+    room.disconnectedPlayers.delete(name);
+
+    room.players.set(socket.id, { name, ready: disconnected.ready });
+    if (disconnected.wasHost) room.hostId = socket.id;
+
+    // Restore round data mapping
+    let roundData = disconnected.roundData;
+    if (roundData) room.playerRoundData.set(socket.id, roundData);
+
+    socket.join(code);
+    callback({
+      success: true,
+      roomCode: code,
+      playerId: socket.id,
+      isHost: disconnected.wasHost || room.hostId === socket.id,
+      gameState: room.state,
+      roundData
+    });
+
+    io.to(room.code).emit('player-list', getPlayerList(room));
+    io.to(room.code).emit('player-rejoined', { name });
   });
 
   // UPDATE SETTINGS (host only)
@@ -157,24 +241,16 @@ io.on('connection', (socket) => {
     const round = startRound(room, category);
     if (!round) return callback({ success: false, error: 'Invalid category.' });
 
-    // In single-device mode the client passes singleDevice:true and needs the word back in the callback
     callback({ success: true, word: round.wordEntry.word, category: round.category, hint: round.wordEntry.hint });
 
     // Send each player their role
-    for (const [id, player] of room.players) {
-      const isImposter = round.imposters.has(id);
-      io.to(id).emit('round-started', {
-        category: round.category,
-        isImposter,
-        word: isImposter ? null : round.wordEntry.word,
-        hint: (isImposter && room.settings.hintsEnabled) ? round.wordEntry.hint : null,
-        imposterCount: round.imposters.size,
-        playerCount: room.players.size
-      });
+    for (const [id] of room.players) {
+      const rd = room.playerRoundData.get(id);
+      if (rd) io.to(id).emit('round-started', rd);
     }
   });
 
-  // PLAYER READY (acknowledged word)
+  // PLAYER READY
   socket.on('player-ready', () => {
     const room = findRoomBySocket(socket.id);
     if (!room) return;
@@ -183,7 +259,7 @@ io.on('connection', (socket) => {
     io.to(room.code).emit('player-list', getPlayerList(room));
   });
 
-  // REVEAL (host ends the round, shows who was imposter)
+  // REVEAL
   socket.on('reveal', (callback) => {
     const room = findRoomBySocket(socket.id);
     if (!room || room.hostId !== socket.id || !room.currentRound) return;
@@ -208,7 +284,7 @@ io.on('connection', (socket) => {
       imposters: imposterNames
     });
 
-    callback({ success: true });
+    if (callback) callback({ success: true });
   });
 
   // BACK TO LOBBY
@@ -217,34 +293,58 @@ io.on('connection', (socket) => {
     if (!room || room.hostId !== socket.id) return;
     room.state = 'lobby';
     room.currentRound = null;
+    room.playerRoundData = new Map();
     for (const [, p] of room.players) p.ready = false;
     io.to(room.code).emit('back-to-lobby');
     io.to(room.code).emit('player-list', getPlayerList(room));
     io.to(room.code).emit('settings-updated', room.settings);
   });
 
-  // DISCONNECT
+  // DISCONNECT — grace period before removing player
   socket.on('disconnect', () => {
     const room = findRoomBySocket(socket.id);
     if (!room) return;
 
     const player = room.players.get(socket.id);
+    if (!player) return;
+
+    const wasHost = room.hostId === socket.id;
+    const roundData = room.playerRoundData.get(socket.id) || null;
+
     room.players.delete(socket.id);
+    room.playerRoundData.delete(socket.id);
 
-    if (room.players.size === 0) {
-      rooms.delete(room.code);
-      return;
-    }
-
-    // If host left, transfer host
-    if (room.hostId === socket.id) {
-      const newHostId = room.players.keys().next().value;
-      room.hostId = newHostId;
-      io.to(newHostId).emit('you-are-host');
-    }
-
+    // Notify others immediately (shown as "disconnected", not removed yet)
+    io.to(room.code).emit('player-disconnected', { name: player.name });
     io.to(room.code).emit('player-list', getPlayerList(room));
-    if (player) io.to(room.code).emit('player-left', { name: player.name });
+
+    // Grace period — 45 seconds to reconnect
+    const timeout = setTimeout(() => {
+      room.disconnectedPlayers.delete(player.name);
+
+      if (room.players.size === 0 && room.disconnectedPlayers.size === 0) {
+        rooms.delete(room.code);
+        return;
+      }
+
+      // Transfer host if needed
+      if (wasHost && room.players.size > 0) {
+        const newHostId = room.players.keys().next().value;
+        room.hostId = newHostId;
+        io.to(newHostId).emit('you-are-host');
+      }
+
+      io.to(room.code).emit('player-list', getPlayerList(room));
+      io.to(room.code).emit('player-left', { name: player.name });
+    }, 45000);
+
+    room.disconnectedPlayers.set(player.name, {
+      prevSocketId: socket.id,
+      wasHost,
+      roundData,
+      ready: player.ready,
+      timeout
+    });
   });
 });
 
