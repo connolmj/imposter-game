@@ -51,6 +51,7 @@ body {
   display: none; flex-direction: column; align-items: center;
   min-height: 100vh; min-height: -webkit-fill-available;
   padding: 24px 20px 40px; overflow-y: auto;
+  position: relative;
 }
 .screen.active { display: flex; }
 
@@ -242,8 +243,9 @@ body {
 }
 .word-card.imposter-card .hint-box {
   margin-top: 18px; padding: 14px;
-  background: rgba(255,255,255,0.08); border-radius: 16px;
-  color: rgba(255,255,255,0.7); font-size: 0.9rem; font-weight: 600;
+  background: rgba(255,255,255,0.16); border-radius: 16px;
+  color: rgba(255,255,255,0.95); font-size: 0.9rem; font-weight: 700;
+  border: 1px solid rgba(255,255,255,0.15);
 }
 .word-card.imposter-card .hint-box span { color: #FFD93D; font-weight: 800; }
 .word-card.imposter-card .no-hint {
@@ -297,7 +299,7 @@ body {
 .error-text { color: #FFD93D; font-weight: 700; font-size: 0.85rem; margin-top: 8px; text-align: center; max-width: 340px; }
 
 /* ── Utility ───────────────────────────────────────────── */
-.mt-8 { margin-top: 8px; } .mt-12 { margin-top: 12px; } .mt-16 { margin-top: 16px; } .mt-24 { margin-top: 24px; }
+.mt-8 { margin-top: 8px; } .mt-12 { margin-top: 12px; } .mt-16 { margin-top: 16px; } .mt-24 { margin-top: 24px; } .mt-52 { margin-top: 52px; }
 .text-center { text-align: center; }
 .text-dim { color: rgba(255,255,255,0.5); }
 .text-sm { font-size: 0.85rem; }
@@ -382,7 +384,7 @@ body {
   <!-- How to Play button -->
   <button class="htp-btn" id="htp-btn-mode" onclick="openHTP()">❓ How to Play</button>
 
-  <div class="title mt-24">Imposter!</div>
+  <div class="title mt-52">Imposter!</div>
   <div class="subtitle">The Party Game</div>
 
   <div style="width:100%;max-width:340px;margin-top:36px;">
@@ -414,7 +416,7 @@ body {
   <button class="htp-btn" onclick="openHTP()">❓ How to Play</button>
   <button class="back-btn" onclick="showScreen('screen-mode')">← Back</button>
 
-  <div class="title mt-24">Imposter!</div>
+  <div class="title mt-52">Imposter!</div>
   <div class="subtitle">Everyone's Phone</div>
 
   <div class="input-group mt-24">
@@ -446,7 +448,7 @@ body {
   <button class="htp-btn" onclick="openHTP()">❓ How to Play</button>
   <button class="back-btn" onclick="showScreen('screen-mode')">← Back</button>
 
-  <div class="title mt-24">One Device</div>
+  <div class="title mt-52">One Device</div>
   <div class="subtitle">Enter all player names</div>
 
   <div class="player-list mt-16" id="single-player-list"></div>
@@ -504,7 +506,7 @@ body {
       <div class="role-label" id="single-reveal-role-label">Your Word Is</div>
       <div class="the-word" id="single-reveal-word"></div>
       <div class="cat-pill" id="single-reveal-cat" style="margin-top:8px;"></div>
-      <div class="hint-box hidden" id="single-reveal-hint" style="margin-top:14px;padding:12px;background:rgba(255,255,255,0.08);border-radius:12px;color:rgba(255,255,255,0.7);font-size:0.85rem;"></div>
+      <div class="hint-box hidden" id="single-reveal-hint" style="margin-top:14px;padding:12px;background:rgba(255,255,255,0.16);border-radius:12px;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.95);font-size:0.85rem;font-weight:700;"></div>
     </div>
   </div>
 
@@ -596,7 +598,7 @@ body {
 <!-- ═══════════════════════════════════════════════════════ -->
 <div class="screen" id="screen-lobby">
   <button class="htp-btn" onclick="openHTP()">❓ How to Play</button>
-  <div class="title mt-8">Imposter!</div>
+  <div class="title mt-52">Imposter!</div>
   <div class="room-pill"><div class="dot"></div> <span id="lobby-code"></span></div>
 
   <div class="player-list" id="lobby-players"></div>
@@ -640,7 +642,7 @@ body {
 <!-- ═══════════════════════════════════════════════════════ -->
 <div class="screen" id="screen-playing">
   <button class="htp-btn" onclick="openHTP()">❓ How to Play</button>
-  <div class="title mt-8">Imposter!</div>
+  <div class="title mt-52">Imposter!</div>
   <div class="subtitle" id="playing-subtitle"></div>
 
   <!-- Normal player card -->
@@ -1184,7 +1186,7 @@ function showSinglePassScreen() {
     if (singleSettings.hintsEnabled && player.hint) {
       hintBox.innerHTML = `Psst... here's a hint: <strong style="color:#FFD93D">${esc(player.hint)}</strong>`;
       hintBox.classList.remove('hidden');
-      hintBox.style.background = 'rgba(108,60,225,0.1)';
+      hintBox.style.background = 'rgba(255,255,255,0.16)';
     } else {
       hintBox.classList.add('hidden');
     }
@@ -1254,8 +1256,14 @@ document.getElementById('btn-single-reveal').addEventListener('click', () => {
 
 document.getElementById('btn-single-play-again').addEventListener('click', () => {
   setConfetti(false);
+  // Preserve singlePlayers — just reset game state and categories
+  singleSelectedCats = new Set();
+  singleRoles = [];
+  singleCurrentIdx = 0;
+  document.getElementById('btn-single-start').classList.add('hidden');
+  document.querySelectorAll('#single-categories .category-card').forEach(c => c.classList.remove('selected'));
   showScreen('screen-single-setup');
-  initSingleSetup();
+  renderSinglePlayerList();
 });
 </script>
 </body>
