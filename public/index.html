@@ -1318,29 +1318,14 @@ function showSinglePassScreen() {
   document.getElementById('single-pass-progress').textContent =
     `Player ${singleCurrentIdx + 1} of ${singleRoles.length}`;
 
-  // Reset card to locked state
+  // Reset card to locked state — always white/neutral, never reveal role via color
   const passCard = document.getElementById('single-pass-card');
+  passCard.classList.remove('imposter-card');
   document.getElementById('single-locked').style.display = 'block';
   document.getElementById('single-revealed').style.display = 'none';
   document.getElementById('btn-hold-reveal').textContent = '👁 Hold to Reveal';
   document.getElementById('btn-hold-reveal').classList.remove('btn-hold');
   document.getElementById('btn-single-done').classList.add('hidden');
-
-  // Apply imposter card styling if applicable
-  if (player.isImposter) {
-    passCard.classList.add('imposter-card');
-    // Lock icon and instructions need to stay legible on red bg
-    document.getElementById('single-pass-name').style.color = 'white';
-    document.getElementById('single-locked').querySelectorAll('div').forEach(d => {
-      if (d.id !== 'single-pass-name') d.style.color = 'rgba(255,255,255,0.75)';
-    });
-  } else {
-    passCard.classList.remove('imposter-card');
-    document.getElementById('single-pass-name').style.color = '#2d3436';
-    document.getElementById('single-locked').querySelectorAll('div').forEach(d => {
-      d.style.color = '';
-    });
-  }
 
   // Pre-populate revealed state (hidden)
   if (player.isImposter) {
@@ -1376,6 +1361,11 @@ const holdBtn = document.getElementById('btn-hold-reveal');
 function startReveal() {
   if (isRevealed) return;
   isRevealed = true;
+  const player = singleRoles[singleCurrentIdx];
+  // Apply red imposter styling only now — not before, so locked state doesn't give it away
+  if (player.isImposter) {
+    document.getElementById('single-pass-card').classList.add('imposter-card');
+  }
   document.getElementById('single-locked').style.display = 'none';
   document.getElementById('single-revealed').style.display = 'block';
   holdBtn.textContent = '🙈 Release to Hide';
@@ -1386,6 +1376,8 @@ function startReveal() {
 function endReveal() {
   if (!isRevealed) return;
   isRevealed = false;
+  // Always remove imposter styling when hiding — card goes back to neutral white
+  document.getElementById('single-pass-card').classList.remove('imposter-card');
   document.getElementById('single-locked').style.display = 'block';
   document.getElementById('single-revealed').style.display = 'none';
   holdBtn.textContent = '👁 Hold to Reveal';
