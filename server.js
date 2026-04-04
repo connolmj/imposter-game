@@ -254,6 +254,11 @@ io.on('connection', (socket) => {
     if (!room || room.hostId !== socket.id) return callback({ success: false, error: 'Only the host can start rounds.' });
     if (room.players.size < 3) return callback({ success: false, error: 'Need at least 3 players to start.' });
 
+    const maxImposters = Math.floor(room.players.size / 2);
+    if (room.settings.imposterCount > maxImposters) {
+      return callback({ success: false, error: `Too many imposters! With ${room.players.size} players you can have at most ${maxImposters} imposter${maxImposters > 1 ? 's' : ''} (need at least 2 players per imposter).` });
+    }
+
     const round = startRound(room, category);
     if (!round) return callback({ success: false, error: 'Invalid category.' });
 

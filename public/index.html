@@ -1312,7 +1312,14 @@ function renderSinglePlayerList() {
 
 function removeSinglePlayer(idx) {
   singlePlayers.splice(idx, 1);
+  // Clamp imposter count to remain valid for the new player count
+  const maxImposters = Math.max(1, Math.floor(singlePlayers.length / 2));
+  if (singleSettings.imposterCount > maxImposters) {
+    singleSettings.imposterCount = maxImposters;
+    document.getElementById('s-imp-count').textContent = singleSettings.imposterCount;
+  }
   renderSinglePlayerList();
+  updateSingleStartBtn();
 }
 
 document.getElementById('btn-add-player').addEventListener('click', addSinglePlayer);
@@ -1340,9 +1347,12 @@ document.getElementById('s-imp-minus').addEventListener('click', () => {
   }
 });
 document.getElementById('s-imp-plus').addEventListener('click', () => {
-  if (singleSettings.imposterCount < 3) {
+  const maxImposters = Math.max(1, Math.floor(singlePlayers.length / 2));
+  if (singleSettings.imposterCount < maxImposters) {
     singleSettings.imposterCount++;
     document.getElementById('s-imp-count').textContent = singleSettings.imposterCount;
+  } else {
+    showError('single-error', `Can't have more than ${maxImposters} imposter${maxImposters > 1 ? 's' : ''} with ${singlePlayers.length} players (need at least 2 players per imposter).`);
   }
 });
 document.getElementById('s-hints-toggle').addEventListener('change', (e) => {
@@ -1352,6 +1362,10 @@ document.getElementById('s-hints-toggle').addEventListener('change', (e) => {
 document.getElementById('btn-single-start').addEventListener('click', () => {
   if (singlePlayers.length < 3) return showError('single-error', 'Need at least 3 players!');
   if (singleSelectedCats.size === 0) return showError('single-error', 'Pick at least one category!');
+  const maxImposters = Math.floor(singlePlayers.length / 2);
+  if (singleSettings.imposterCount > maxImposters) {
+    return showError('single-error', `Too many imposters! With ${singlePlayers.length} players you can have at most ${maxImposters} imposter${maxImposters > 1 ? 's' : ''}.`);
+  }
   startSingleGame();
 });
 
