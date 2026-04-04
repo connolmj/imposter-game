@@ -607,6 +607,17 @@ body {
   </div>
 </div>
 
+<!-- Back to Lobby Confirm Modal -->
+<div id="confirm-lobby-overlay" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:24px 20px;">
+  <div style="max-width:320px;width:100%;background:white;border-radius:24px;padding:28px 24px;color:#2d3436;text-align:center;">
+    <div style="font-size:2rem;">↩</div>
+    <div style="font-family:'Baloo 2',cursive;font-size:1.4rem;font-weight:800;margin-top:8px;">Back to Lobby?</div>
+    <div style="font-size:0.9rem;color:#636e72;margin-top:8px;line-height:1.5;">This will end the current round for everyone and return the group to the lobby.</div>
+    <button onclick="confirmBackToLobby()" style="width:100%;margin-top:20px;padding:14px;font-family:'Baloo 2',cursive;font-size:1rem;font-weight:800;color:white;background:linear-gradient(135deg,#b71c1c,#c62828);border:none;border-radius:50px;cursor:pointer;">Yes, Back to Lobby</button>
+    <button onclick="closeConfirmLobby()" style="width:100%;margin-top:10px;padding:14px;font-family:'Baloo 2',cursive;font-size:1rem;font-weight:800;color:#636e72;background:#f5f5f5;border:none;border-radius:50px;cursor:pointer;">Cancel</button>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════════════════════ -->
 <!-- SCREEN: LOBBY -->
 <!-- ═══════════════════════════════════════════════════════ -->
@@ -882,6 +893,9 @@ let selectedCategories = new Set();
 function loadCategories() {
   selectedCategories.clear();
   document.getElementById('btn-start-round').classList.add('hidden');
+  // Always reset select-all button text when grid is rebuilt
+  const saBtn = document.getElementById('btn-lobby-select-all');
+  if (saBtn) saBtn.textContent = 'Select All';
 
   socket.emit('get-categories', (cats) => {
     const grid = document.getElementById('lobby-categories');
@@ -962,7 +976,23 @@ document.getElementById('btn-reveal').addEventListener('click', () => {
 });
 
 document.getElementById('btn-reset-lobby').addEventListener('click', () => {
+  openConfirmLobby();
+});
+
+function openConfirmLobby() {
+  const el = document.getElementById('confirm-lobby-overlay');
+  el.style.display = 'flex';
+}
+function closeConfirmLobby() {
+  document.getElementById('confirm-lobby-overlay').style.display = 'none';
+}
+function confirmBackToLobby() {
+  closeConfirmLobby();
   socket.emit('back-to-lobby');
+}
+// Tap backdrop to dismiss
+document.getElementById('confirm-lobby-overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('confirm-lobby-overlay')) closeConfirmLobby();
 });
 
 // ── REVEAL SCREEN ───────────────────────────────────
