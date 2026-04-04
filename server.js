@@ -273,6 +273,14 @@ io.on('connection', (socket) => {
     const player = room.players.get(socket.id);
     if (player) player.ready = true;
     io.to(room.code).emit('player-list', getPlayerList(room));
+
+    // Check if everyone is now ready
+    const allReady = [...room.players.values()].every(p => p.ready);
+    if (allReady && room.state === 'playing') {
+      io.to(room.code).emit('all-players-ready', {
+        firstHintName: room.currentRound?.firstHintName || ''
+      });
+    }
   });
 
   // REVEAL

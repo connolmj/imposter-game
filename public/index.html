@@ -680,15 +680,25 @@ body {
     <div class="no-hint hidden" id="card-no-hint">No hints this round. Blend in!</div>
   </div>
 
-  <!-- First hint player chip -->
+  <!-- First hint player chip (shown only after everyone is ready) -->
   <div class="hidden" id="first-hint-chip" style="margin-top:16px;padding:10px 18px;background:rgba(255,255,255,0.15);border-radius:50px;font-size:0.85rem;font-weight:800;text-align:center;backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,0.25);">
     🎲 <span id="first-hint-name"></span> gives the first hint!
   </div>
 
+  <!-- All ready banner (hidden until everyone clicks ready) -->
+  <div class="hidden" id="all-ready-banner" style="margin-top:16px;width:100%;max-width:340px;padding:18px 20px;background:rgba(46,213,115,0.2);border:2px solid rgba(46,213,115,0.5);border-radius:20px;text-align:center;backdrop-filter:blur(10px);">
+    <div style="font-size:1.5rem;">🗣️</div>
+    <div style="font-family:'Baloo 2',cursive;font-size:1.15rem;font-weight:800;margin-top:6px;">Everyone's ready!</div>
+    <div style="font-size:0.85rem;font-weight:700;color:rgba(255,255,255,0.75);margin-top:4px;">Discuss and find the imposter.</div>
+  </div>
+
   <button class="btn mt-16" id="btn-ready">I've Seen My Word!</button>
 
-  <!-- Host reveal button -->
-  <button class="btn btn-danger mt-12 hidden" id="btn-reveal">Reveal Imposter(s)</button>
+  <!-- Host reveal button — hidden until all players are ready -->
+  <button class="btn btn-danger mt-12 hidden" id="btn-reveal">Reveal Imposter(s) 🎭</button>
+
+  <!-- Host reset button — always visible to host during playing phase -->
+  <button class="btn mt-12 hidden" id="btn-reset-lobby" style="color:rgba(255,255,255,0.5);border-color:rgba(255,255,255,0.2);font-size:0.9rem;">↩ Back to Lobby</button>
 
   <div class="player-list mt-16" id="playing-players"></div>
 </div>
@@ -951,6 +961,10 @@ document.getElementById('btn-reveal').addEventListener('click', () => {
   socket.emit('reveal', (res) => {});
 });
 
+document.getElementById('btn-reset-lobby').addEventListener('click', () => {
+  socket.emit('back-to-lobby');
+});
+
 // ── REVEAL SCREEN ───────────────────────────────────
 document.getElementById('btn-next-round').addEventListener('click', () => {
   socket.emit('back-to-lobby');
@@ -1002,11 +1016,13 @@ socket.on('connect', () => {
           document.getElementById('card-word').textContent = data.word;
           document.getElementById('card-category').textContent = data.category;
         }
-        if (data.firstHintName) {
-          document.getElementById('first-hint-name').textContent = data.firstHintName;
-          document.getElementById('first-hint-chip').classList.remove('hidden');
-        }
-        if (res.isHost) document.getElementById('btn-reveal').classList.remove('hidden');
+        // On reconnect during playing, we can't know if all-ready fired yet,
+        // so conservatively hide reveal/banner; host can still use reset button
+        document.getElementById('all-ready-banner').classList.add('hidden');
+        document.getElementById('first-hint-chip').classList.add('hidden');
+        document.getElementById('btn-reveal').classList.add('hidden');
+        if (res.isHost) document.getElementById('btn-reset-lobby').classList.remove('hidden');
+        else document.getElementById('btn-reset-lobby').classList.add('hidden');
       } else if (res.gameState === 'reveal') {
         showScreen('screen-lobby');
         if (res.isHost) { setupLobbyForHost(); loadCategories(); }
@@ -1043,7 +1059,11 @@ socket.on('you-are-host', () => {
     loadCategories();
   }
   if (screen.id === 'screen-playing') {
-    document.getElementById('btn-reveal').classList.remove('hidden');
+    document.getElementById('btn-reset-lobby').classList.remove('hidden');
+    // Only show reveal if the all-ready banner is already visible (everyone was ready)
+    if (!document.getElementById('all-ready-banner').classList.contains('hidden')) {
+      document.getElementById('btn-reveal').classList.remove('hidden');
+    }
   }
   if (screen.id === 'screen-reveal') {
     document.getElementById('btn-next-round').classList.remove('hidden');
@@ -1090,19 +1110,37 @@ socket.on('round-started', (data) => {
     document.getElementById('card-category').textContent = data.category;
   }
 
+  // Reveal button hidden for everyone until all players are ready
+  btnReveal.classList.add('hidden');
+
+  // Hide all-ready banner until everyone is ready
+  document.getElementById('all-ready-banner').classList.add('hidden');
+
+  // First-hint chip hidden until all ready
+  document.getElementById('first-hint-chip').classList.add('hidden');
+
+  // Show reset-to-lobby button only to host
+  const btnReset = document.getElementById('btn-reset-lobby');
   if (isHost) {
-    btnReveal.classList.remove('hidden');
+    btnReset.classList.remove('hidden');
   } else {
-    btnReveal.classList.add('hidden');
+    btnReset.classList.add('hidden');
   }
+});
+
+socket.on('all-players-ready', (data) => {
+  // Show the discussion banner for everyone
+  document.getElementById('all-ready-banner').classList.remove('hidden');
 
   // Show who gives the first hint
-  const chip = document.getElementById('first-hint-chip');
   if (data.firstHintName) {
     document.getElementById('first-hint-name').textContent = data.firstHintName;
-    chip.classList.remove('hidden');
-  } else {
-    chip.classList.add('hidden');
+    document.getElementById('first-hint-chip').classList.remove('hidden');
+  }
+
+  // Now unlock the reveal button — host only
+  if (isHost) {
+    document.getElementById('btn-reveal').classList.remove('hidden');
   }
 });
 
